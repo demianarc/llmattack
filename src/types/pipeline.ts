@@ -1,0 +1,48 @@
+export type DatasetPrepResult = {
+  jsonl: string;
+  datasetFileName: string;
+  recordCount: number;
+  samplePrompts: string[];
+  uploadedFileId?: string;
+  simulated: boolean;
+};
+
+export type AuditResult = {
+  refusalRate: number;
+  riskScore: number;
+  riskLevel: "low" | "medium" | "high";
+  flaggedPhrases: string[];
+  rawResponse: string;
+  tokensUsed: number;
+  simulated: boolean;
+};
+
+export type JailbreakResult = {
+  successRate: number;
+  attempts: number;
+  successfulPrompts: Array<{ prompt: string; responseSnippet: string }>;
+  simulated: boolean;
+};
+
+export type FineTuneResult = {
+  jobId: string;
+  status: string;
+  trainingFileId?: string;
+  validationFileId?: string;
+  hardenedArtifacts?: Array<{ fileId: string; filename: string }>;
+  simulated: boolean;
+};
+
+export type GuardrailsResult = {
+  guardrailSummary: string;
+  blocked: boolean;
+  response: string;
+  simulated: boolean;
+};
+
+export type BatchInferenceResult = {
+  batchId: string;
+  status: string;
+  simulated: boolean;
+};
+
