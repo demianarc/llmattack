@@ -233,22 +233,26 @@ export function AutomationPanel() {
       if (hardenedModel) {
         setDeployedModelStatus("active");
       }
-      if (
-        !hardenedModel &&
-        resolvedJob.latestCheckpoint?.fine_tuned_model_checkpoint
-      ) {
+      const latestCheckpointId = resolvedJob.latestCheckpoint?.id;
+      if (!hardenedModel && latestCheckpointId) {
         updateStep("fineTune", "running");
         setDeployedModelStatus("deploying");
+        const resolvedBaseModel = resolveDeploymentModelId(
+          resolvedJob.job.model ?? modelId,
+        );
         const deployResult = await deployCheckpointAdapter({
-          baseModel: resolveDeploymentModelId(modelId),
+          baseModel: resolvedBaseModel,
           jobId: fineTuneJob.jobId ?? resolvedJob.job.id,
-          checkpointName:
-            resolvedJob.latestCheckpoint.fine_tuned_model_checkpoint,
+          checkpointName: latestCheckpointId,
         });
+        const deployedModelName = composeDeployedModelName(
+          deployResult.name,
+          resolvedBaseModel,
+        );
         setDeployedModelStatus("validating");
-        await waitForModelActivation(deployResult.name);
+        await waitForModelActivation(deployedModelName);
         setDeployedModelStatus("active");
-        hardenedModel = deployResult.name;
+        hardenedModel = deployedModelName;
       }
       if (!hardenedModel) {
         setDeployedModelStatus("error");
@@ -413,9 +417,11 @@ async function waitForFineTune({ jobId }: { jobId: string }) {
         job: {
           id: string;
           status: string;
+          model?: string;
           fine_tuned_model?: string | null;
         };
         latestCheckpoint?: {
+          id?: string;
           fine_tuned_model_checkpoint?: string;
         };
       };
@@ -467,6 +473,10 @@ async function deployCheckpointAdapter({
   });
 }
 
+function composeDeployedModelName(name: string, baseModel: string) {
+  return name.includes("/") ? name : `${baseModel}-LoRa:${name}`;
+}
+
 async function waitForModelActivation(name: string) {
   while (true) {
     const response = await fetch(
@@ -486,7 +496,9 @@ async function waitForModelActivation(name: string) {
         payload.data.status_reason ?? "Nebius reported deployment error",
       );
     }
-    await new Promise((resolve) => setTimeout(resolve, 10_000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, payload.data.status === "not_found" ? 5_000 : 10_000),
+    );
   }
 }
 

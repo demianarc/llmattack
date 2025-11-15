@@ -90,6 +90,9 @@ const FINE_TUNE_MODEL_ALIASES: Record<string, string> = {
 
 const DEPLOYMENT_MODEL_ALIASES: Record<string, string> = {
   "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "meta-llama/Llama-3.1-70B": "meta-llama/Meta-Llama-3.1-70B",
+  "meta-llama/Llama-3.3-70B-Instruct":
+    "meta-llama/Llama-3.3-70B-Instruct-fast",
 };
 
 export function resolveFineTuneModelId(modelId: string) {
@@ -183,6 +186,7 @@ export async function deployCheckpointAsModel({
 
   const source = `${jobId}:${checkpointName}`;
   const host = getNebiusHost();
+  const resolvedBaseModel = resolveDeploymentModelId(baseModel);
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const response = await fetch(`${host}/v0/models`, {
@@ -193,14 +197,22 @@ export async function deployCheckpointAsModel({
       },
       body: JSON.stringify({
         source,
-        base_model: baseModel,
+        base_model: resolvedBaseModel,
         name: adapterName,
         description: "Nebius FT automation deploy",
       }),
     });
 
     if (response.ok) {
-      return response.json() as Promise<{ name: string }>;
+      const payload = (await response.json()) as { name?: string };
+      const normalizedName = composeDeploymentName(
+        payload.name ?? adapterName,
+        resolvedBaseModel,
+      );
+      return {
+        ...payload,
+        name: normalizedName,
+      } as { name: string };
     }
 
     const text = await response.text();
@@ -238,6 +250,14 @@ export async function getModelStatus(name: string) {
     },
   });
 
+  if (response.status === 404) {
+    return {
+      name,
+      status: "not_found",
+      status_reason: "Model not yet registered",
+    };
+  }
+
   if (!response.ok) {
     const text = await response.text();
     throw new PipelineActionError(
@@ -245,11 +265,11 @@ export async function getModelStatus(name: string) {
     );
   }
 
-  return response.json() as Promise<{
+  return (await response.json()) as {
     name: string;
     status: string;
     status_reason?: string;
-  }>;
+  };
 }
 
 async function safeFetchModel(host: string, name: string) {
@@ -266,6 +286,10 @@ async function safeFetchModel(host: string, name: string) {
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function composeDeploymentName(name: string, baseModel: string) {
+  return name.includes("/") ? name : `${baseModel}-LoRa:${name}`;
 }
 
 export async function createBatchJob(inputFileId: string) {
