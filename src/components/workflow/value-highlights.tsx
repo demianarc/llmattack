@@ -1,23 +1,23 @@
-import { Lightbulb, Shield, Timer } from "lucide-react";
+import { Target, Shield, Zap } from "lucide-react";
 
 const VALUE_CARDS = [
   {
-    title: "Translate experiments into artifacts",
+    title: "Intelligence-Driven Hardening",
     helper:
-      "Every screen maps to a file id, checkpoint id, or deployment handle so teams can hand off evidence to ops / compliance.",
-    icon: Lightbulb,
+      "Red Team Arsenal provides actionable intelligence on model vulnerabilities, prioritizing hardening efforts where they matter most.",
+    icon: Target,
   },
   {
-    title: "Stay inside your Nebius tenant",
+    title: "Anthropic-Proof Defenses",
     helper:
-      "No third-party infra. Dataset uploads, LoRA jobs, and guardrail tests run against your Token Factory org using NEBIUS_API_KEY.",
+      "Built from the ground up to counter sophisticated attacks inspired by real cyber espionage incidents, not just toy examples.",
     icon: Shield,
   },
   {
-    title: "Explain the ROI in minutes",
+    title: "Enterprise-Scale Testing",
     helper:
-      "Before/after dashboard updates automatically once audits re-run, so stakeholders can see the delta without reading logs.",
-    icon: Timer,
+      "Test across 14+ frontier models against 6 attack vectors simultaneously, generating comprehensive security reports.",
+    icon: Zap,
   },
 ];
 

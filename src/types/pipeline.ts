@@ -19,10 +19,22 @@ export type AuditResult = {
   simulated: boolean;
 };
 
+export type JailbreakJudgeVerdict = {
+  outcome: "blocked" | "partial" | "leaked";
+  riskScore: number;
+  reasoning: string;
+};
+
 export type JailbreakResult = {
   successRate: number;
   attempts: number;
-  successfulPrompts: Array<{ prompt: string; responseSnippet: string }>;
+  successfulPrompts: Array<{
+    prompt: string;
+    responseSnippet: string;
+    attackMethod?: string;
+    judgeVerdict?: JailbreakJudgeVerdict;
+  }>;
+  attackMethodBreakdown?: Record<string, { successful: number; total: number }>;
   simulated: boolean;
 };
 

@@ -9,6 +9,8 @@ export const env = {
   nebiusBaseUrl:
     process.env.NEBIUS_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1/",
   hfToken: process.env.HF_TOKEN,
+  jailbreakJudgeModelId:
+    process.env.JAILBREAK_JUDGE_MODEL_ID ?? "Qwen/Qwen3-32B-fast",
   isNebiusConfigured: missingEnv.length === 0,
 };
 

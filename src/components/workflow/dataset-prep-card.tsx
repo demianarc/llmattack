@@ -26,6 +26,15 @@ export function DatasetPrepCard() {
       fileName: "advbench_train.jsonl",
       enableSyntheticAugmentation: true,
       plinySampleSize: 24,
+      saltingSampleSize: 50,
+      multiTurnSampleSize: 75,
+      anthropicRoleplaySize: 25,
+      enableParaphraseAugmentation: true,
+      enableTokenManipulation: true,
+      enableNarrativeDeception: true,
+      enableRoleplayScreenplay: true,
+      enablePrefixObfuscation: true,
+      enableLikertRewardHijack: true,
     },
   });
   const syntheticEnabled = form.watch("enableSyntheticAugmentation");
@@ -90,24 +99,154 @@ export function DatasetPrepCard() {
             {...form.register("enableSyntheticAugmentation")}
             className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
           />
-          Enrich with synthetic salted / multi-turn refusals
+          Advanced data enrichment (synthetic, salting, multi-turn)
         </label>
-        <label className="flex flex-col gap-2">
-          <span className="font-medium">
-            Pliny-style multi-turn samples (0-100)
-          </span>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            {...form.register("plinySampleSize", { valueAsNumber: true })}
-            disabled={!syntheticEnabled}
-            className="rounded-2xl border border-zinc-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-zinc-100"
-          />
-          <span className="text-xs text-zinc-500">
-            Set above zero to append ASCII-only Pliny-inspired salted conversations.
-          </span>
-        </label>
+
+        {syntheticEnabled && (
+          <div className="space-y-3 rounded-xl bg-emerald-50/50 p-4 border border-emerald-100">
+            <label className="flex flex-col gap-2">
+              <span className="font-medium text-emerald-800">
+                Pliny-style expert jailbreaks (0-50)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={50}
+                {...form.register("plinySampleSize", { valueAsNumber: true })}
+                className="rounded-2xl border border-emerald-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              />
+              <span className="text-xs text-emerald-700">
+                Advanced persona overrides, format coercion, refusal inversion
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="font-medium text-emerald-800">
+                Salting prefixes (0-200)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={200}
+                {...form.register("saltingSampleSize", { valueAsNumber: true })}
+                className="rounded-2xl border border-emerald-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              />
+              <span className="text-xs text-emerald-700">
+                Random prefixes to break jailbreak patterns (Sophos-style)
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="font-medium text-emerald-800">
+                Multi-turn escalation samples (0-150)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={150}
+                {...form.register("multiTurnSampleSize", { valueAsNumber: true })}
+                className="rounded-2xl border border-emerald-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              />
+              <span className="text-xs text-emerald-700">
+                Crescendo-style gradual escalation from benign to harmful
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="font-medium text-emerald-800">
+                Anthropic-inspired role-play (0-100)
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                {...form.register("anthropicRoleplaySize", { valueAsNumber: true })}
+                className="rounded-2xl border border-emerald-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              />
+              <span className="text-xs text-emerald-700">
+                "Cybersecurity firm employee" deception patterns
+              </span>
+            </label>
+
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                {...form.register("enableParaphraseAugmentation")}
+                className="h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-emerald-800">Paraphrase augmentation (semantic diversity)</span>
+            </label>
+
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                {...form.register("enableTokenManipulation")}
+                className="h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className="text-emerald-800">Token manipulation defenses (base64, encoding)</span>
+            </label>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-white/70 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  {...form.register("enableNarrativeDeception")}
+                  className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-emerald-800">
+                  <span className="font-semibold block">Narrative deception (Deceptive Delight / Crescendo)</span>
+                  <span className="text-xs text-emerald-600">
+                    Multi-turn storytelling traps that escalate from benign to harmful under positive framing.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-white/70 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  {...form.register("enableRoleplayScreenplay")}
+                  className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-emerald-800">
+                  <span className="font-semibold block">Role-play & screenplay deception</span>
+                  <span className="text-xs text-emerald-600">
+                    Screenwriter / first-person / Gaybreak styled prompts that hide explicit instructions inside personas.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-white/70 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  {...form.register("enablePrefixObfuscation")}
+                  className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-emerald-800">
+                  <span className="font-semibold block">Prefix / ASCII obfuscation defenses</span>
+                  <span className="text-xs text-emerald-600">
+                    Prefix injection, universal dividers, ASCII diagrams, and API system instructions that mask intent.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-white/70 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  {...form.register("enableLikertRewardHijack")}
+                  className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-emerald-800">
+                  <span className="font-semibold block">Likert / reward hacking defenses</span>
+                  <span className="text-xs text-emerald-600">
+                    Bad Likert Judge style scale-scoring prompts that coerce models into high-rated harmful outputs.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
 
         {form.formState.errors.splitSize && (
           <p className="text-sm text-rose-500">
