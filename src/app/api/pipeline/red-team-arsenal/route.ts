@@ -13,7 +13,6 @@ export async function GET() {
 import { callNebiusChat } from "@/lib/nebius";
 import { env } from "@/lib/env";
 import { generateAttackPrompt, HARMFUL_KEYWORDS, judgeJailbreakAttempt } from "@/lib/pipeline";
-import { Buffer } from "node:buffer";
 
 interface ArsenalTestConfig {
   models: string[];
@@ -30,6 +29,9 @@ interface ArsenalResult {
   vulnerabilityScore: number;
   sampleSuccessfulPrompt: string;
   sampleResponse: string;
+  sampleJudgeOutcome?: string;
+  sampleJudgeReason?: string;
+  sampleJudgeRisk?: number;
 }
 
 interface BatchArsenalResult {
