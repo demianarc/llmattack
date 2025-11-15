@@ -22,6 +22,8 @@ type WorkflowState = {
   trainingJsonl?: string;
   fineTuneJob?: FineTuneJobState;
   hardenedModelId?: string;
+  deployedModelStatus?: string;
+  lastCheckpointId?: string;
   baselineAudit?: AuditResult;
   hardenedAudit?: AuditResult;
   baselineJailbreak?: JailbreakResult;
@@ -38,6 +40,8 @@ type WorkflowActions = {
   startFineTuneJob: (job: FineTuneJobState) => void;
   updateFineTuneJob: (job: Partial<FineTuneJobState> & { id: string }) => void;
   setHardenedModelId: (modelId?: string) => void;
+  setDeployedModelStatus: (status?: string) => void;
+  setLastCheckpointId: (checkpointId?: string) => void;
   recordAuditResult: (stage: "baseline" | "hardened", result: AuditResult) => void;
   recordJailbreakResult: (
     stage: "baseline" | "hardened",
@@ -64,6 +68,9 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
           : state,
       ),
     setHardenedModelId: (hardenedModelId) => set({ hardenedModelId }),
+    setDeployedModelStatus: (deployedModelStatus) =>
+      set({ deployedModelStatus }),
+    setLastCheckpointId: (lastCheckpointId) => set({ lastCheckpointId }),
     recordAuditResult: (stage, result) =>
       set(
         stage === "baseline"
@@ -90,6 +97,8 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
         hardenedJailbreak: undefined,
         lastAuditInput: undefined,
         lastJailbreakInput: undefined,
+        deployedModelStatus: undefined,
+        lastCheckpointId: undefined,
       }),
   }),
 );

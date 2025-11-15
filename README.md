@@ -32,7 +32,7 @@ npm run dev
 2. **Dataset prep** – pull AdvBench rows via the HF datasets server, convert to Nebius-ready JSONL, optionally upload as a fine-tune file.
 3. **TransformerLens audit** – fire adversarial probes and compute heuristic risk/refusal metrics (falls back to simulations if no Nebius key).
 4. **Jailbreak simulation** – run GCG-inspired prompts and track exploit rate + snippets.
-5. **Adversarial fine-tuning** – launch a LoRA job on Nebius (uploads JSONL automatically). The UI polls job status, surfaces the hardened model ID, and can re-run audits/jailbreaks in one click once the job lands. The “One-click hardening run” panel can automatically execute the entire pipeline end-to-end (dataset → baseline evals → FT → guardrails) with default settings.
+5. **Adversarial fine-tuning** – launch a LoRA job on Nebius (uploads JSONL automatically). The UI polls job status, surfaces the hardened model ID, and can re-run audits/jailbreaks in one click once the job lands. The “One-click hardening run” panel can automatically execute the entire pipeline end-to-end (dataset → baseline evals → FT → guardrails) with default settings, including auto-deploying the final checkpoint as a Nebius LoRA adapter.
 6. **Guardrails** – compile a Colang spec (NeMo Guardrails style) and smoke-test a guarded inference.
 7. **Batch inference** – build `/v1/chat/completions` batch JSONL and submit asynchronous jobs (50% cheaper).
 

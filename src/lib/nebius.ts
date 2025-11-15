@@ -72,6 +72,10 @@ export async function callNebiusChat({
   return response;
 }
 
+function getNebiusHost() {
+  return env.nebiusBaseUrl.replace(/\/v1\/?$/, "");
+}
+
 type FineTunePayload = {
   modelId: string;
   trainingFileId: string;
@@ -84,8 +88,16 @@ const FINE_TUNE_MODEL_ALIASES: Record<string, string> = {
     "meta-llama/Llama-3.3-70B-Instruct",
 };
 
-function resolveFineTuneModelId(modelId: string) {
+const DEPLOYMENT_MODEL_ALIASES: Record<string, string> = {
+  "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+};
+
+export function resolveFineTuneModelId(modelId: string) {
   return FINE_TUNE_MODEL_ALIASES[modelId] ?? modelId;
+}
+
+export function resolveDeploymentModelId(modelId: string) {
+  return DEPLOYMENT_MODEL_ALIASES[modelId] ?? modelId;
 }
 
 export async function createFineTuneJob({
@@ -135,18 +147,125 @@ export async function getFineTuneStatus(jobId: string) {
     const job = await client.fineTuning.jobs.retrieve(jobId);
     const checkpoints =
       await client.fineTuning.jobs.checkpoints.list(jobId, {
-        limit: 20,
+        limit: 50,
       });
+
+    const latestCheckpoint = checkpoints.data
+      .slice()
+      .sort((a, b) => (b.step_number ?? 0) - (a.step_number ?? 0))[0];
 
     return {
       job,
-      checkpointFiles: checkpoints.data.flatMap((checkpoint) =>
-        checkpoint.result_files ?? [],
+      checkpointFiles: checkpoints.data.flatMap(
+        (checkpoint) => checkpoint.result_files ?? [],
       ),
+      latestCheckpoint,
     };
   } catch (error) {
     throw new PipelineActionError("Failed to retrieve fine-tuning status", error);
   }
+}
+
+export async function deployCheckpointAsModel({
+  baseModel,
+  jobId,
+  checkpointName,
+  adapterName,
+}: {
+  baseModel: string;
+  jobId: string;
+  checkpointName: string;
+  adapterName: string;
+}) {
+  if (!env.nebiusApiKey) {
+    throw new NebiusConfigError();
+  }
+
+  const source = `${jobId}:${checkpointName}`;
+  const host = getNebiusHost();
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(`${host}/v0/models`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.nebiusApiKey}`,
+      },
+      body: JSON.stringify({
+        source,
+        base_model: baseModel,
+        name: adapterName,
+        description: "Nebius FT automation deploy",
+      }),
+    });
+
+    if (response.ok) {
+      return response.json() as Promise<{ name: string }>;
+    }
+
+    const text = await response.text();
+
+    // Nebius sometimes returns 5xx even when the deployment is queued.
+    if (response.status >= 500) {
+      const existing = await safeFetchModel(host, adapterName);
+      if (existing) {
+        return existing;
+      }
+      if (attempt < 2) {
+        await delay(2000 * (attempt + 1));
+        continue;
+      }
+    }
+
+    throw new PipelineActionError(
+      `Failed to deploy LoRA adapter: ${response.status} ${text}`,
+    );
+  }
+
+  throw new PipelineActionError(
+    "Failed to deploy LoRA adapter: exceeded retry attempts",
+  );
+}
+
+export async function getModelStatus(name: string) {
+  if (!env.nebiusApiKey) {
+    throw new NebiusConfigError();
+  }
+
+  const response = await fetch(`${getNebiusHost()}/v0/models/${name}`, {
+    headers: {
+      Authorization: `Bearer ${env.nebiusApiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new PipelineActionError(
+      `Failed to fetch model status: ${response.status} ${text}`,
+    );
+  }
+
+  return response.json() as Promise<{
+    name: string;
+    status: string;
+    status_reason?: string;
+  }>;
+}
+
+async function safeFetchModel(host: string, name: string) {
+  try {
+    const response = await fetch(`${host}/v0/models/${name}`, {
+      headers: { Authorization: `Bearer ${env.nebiusApiKey}` },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as { name: string };
+  } catch {
+    return null;
+  }
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function createBatchJob(inputFileId: string) {

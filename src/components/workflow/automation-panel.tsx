@@ -10,6 +10,7 @@ import {
   type AuditInput,
   type JailbreakInput,
 } from "@/lib/validators/pipeline";
+import { resolveDeploymentModelId } from "@/lib/nebius";
 import type {
   DatasetPrepResult,
   AuditResult,
@@ -106,6 +107,20 @@ export function AutomationPanel() {
   const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);
   const setDatasetFileId = useWorkflowStore((state) => state.setDatasetFileId);
   const setTrainingJsonl = useWorkflowStore((state) => state.setTrainingJsonl);
+  const hardenedModelId = useWorkflowStore((state) => state.hardenedModelId);
+  const setHardenedModelId = useWorkflowStore(
+    (state) => state.setHardenedModelId,
+  );
+  const deployedModelStatus = useWorkflowStore(
+    (state) => state.deployedModelStatus,
+  );
+  const setDeployedModelStatus = useWorkflowStore(
+    (state) => state.setDeployedModelStatus,
+  );
+  const lastCheckpointId = useWorkflowStore((state) => state.lastCheckpointId);
+  const setLastCheckpointId = useWorkflowStore(
+    (state) => state.setLastCheckpointId,
+  );
   const recordAuditResult = useWorkflowStore(
     (state) => state.recordAuditResult,
   );
@@ -115,9 +130,6 @@ export function AutomationPanel() {
   const startFineTuneJob = useWorkflowStore((state) => state.startFineTuneJob);
   const updateFineTuneJob = useWorkflowStore(
     (state) => state.updateFineTuneJob,
-  );
-  const setHardenedModelId = useWorkflowStore(
-    (state) => state.setHardenedModelId,
   );
   const setLastAuditInput = useWorkflowStore(
     (state) => state.setLastAuditInput,
@@ -129,6 +141,8 @@ export function AutomationPanel() {
 
   const runPipeline = async () => {
     resetAutomation();
+    setDeployedModelStatus(undefined);
+    setLastCheckpointId(undefined);
     setMessage(null);
     setSteps((prev) => resetSteps(prev));
     setIsRunning(true);
@@ -200,7 +214,10 @@ export function AutomationPanel() {
         fineTunedModel: undefined,
       });
 
-      const resolvedJob = await waitForFineTune(fineTuneJob.jobId);
+      const resolvedJob = await waitForFineTune({
+        jobId: fineTuneJob.jobId,
+      });
+      setLastCheckpointId(resolvedJob.latestCheckpoint?.id);
       updateFineTuneJob({
         id: resolvedJob.job.id,
         status: resolvedJob.job.status,
@@ -212,10 +229,34 @@ export function AutomationPanel() {
           `Fine-tune job ended with status ${resolvedJob.job.status}`,
         );
       }
-      if (!resolvedJob.job.fine_tuned_model) {
-        throw new Error("Nebius did not return a hardened model id.");
+      let hardenedModel = resolvedJob.job.fine_tuned_model ?? null;
+      if (hardenedModel) {
+        setDeployedModelStatus("active");
       }
-      setHardenedModelId(resolvedJob.job.fine_tuned_model);
+      if (
+        !hardenedModel &&
+        resolvedJob.latestCheckpoint?.fine_tuned_model_checkpoint
+      ) {
+        updateStep("fineTune", "running");
+        setDeployedModelStatus("deploying");
+        const deployResult = await deployCheckpointAdapter({
+          baseModel: resolveDeploymentModelId(modelId),
+          jobId: fineTuneJob.jobId ?? resolvedJob.job.id,
+          checkpointName:
+            resolvedJob.latestCheckpoint.fine_tuned_model_checkpoint,
+        });
+        setDeployedModelStatus("validating");
+        await waitForModelActivation(deployResult.name);
+        setDeployedModelStatus("active");
+        hardenedModel = deployResult.name;
+      }
+      if (!hardenedModel) {
+        setDeployedModelStatus("error");
+        throw new Error(
+          "Nebius did not return a hardened model id. Deploy a checkpoint manually.",
+        );
+      }
+      setHardenedModelId(hardenedModel);
       updateStep("fineTune", "success");
 
       // Step 5: audit hardened model
@@ -224,7 +265,7 @@ export function AutomationPanel() {
         {
           body: {
             ...auditInput,
-            modelId: resolvedJob.job.fine_tuned_model,
+            modelId: hardenedModel,
           },
         },
       );
@@ -238,7 +279,7 @@ export function AutomationPanel() {
       >("/api/pipeline/jailbreak", {
         body: {
           ...jailbreakInput,
-          modelId: resolvedJob.job.fine_tuned_model,
+          modelId: hardenedModel,
         },
       });
       recordJailbreakResult("hardened", hardenedJailbreak);
@@ -250,7 +291,7 @@ export function AutomationPanel() {
         GuardrailsResult
       >("/api/pipeline/guardrails", {
         body: {
-          modelId: resolvedJob.job.fine_tuned_model,
+          modelId: hardenedModel,
           colang: DEFAULT_COLANG,
           testPrompt: DEFAULT_GUARDRAIL_PROMPT,
         },
@@ -315,6 +356,31 @@ export function AutomationPanel() {
             {message}
           </p>
         )}
+        {(lastCheckpointId || hardenedModelId) && (
+          <div className="rounded-2xl border border-zinc-100 bg-white/70 px-4 py-3 text-xs text-zinc-600">
+            {lastCheckpointId && (
+              <p>
+                Latest checkpoint:{" "}
+                <span className="font-mono text-zinc-800">
+                  {lastCheckpointId}
+                </span>
+              </p>
+            )}
+            {hardenedModelId && (
+              <p className="mt-1">
+                Deployed model:{" "}
+                <span className="font-mono text-zinc-800">
+                  {hardenedModelId}
+                </span>{" "}
+                {deployedModelStatus && (
+                  <span className="text-zinc-500">
+                    ({deployedModelStatus})
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </StepCard>
   );
@@ -334,7 +400,7 @@ function StatusDot({ state }: { state: StepState }) {
   );
 }
 
-async function waitForFineTune(jobId: string) {
+async function waitForFineTune({ jobId }: { jobId: string }) {
   while (true) {
     const response = await fetch(
       `/api/pipeline/fine-tune/status?jobId=${jobId}`,
@@ -348,6 +414,9 @@ async function waitForFineTune(jobId: string) {
           id: string;
           status: string;
           fine_tuned_model?: string | null;
+        };
+        latestCheckpoint?: {
+          fine_tuned_model_checkpoint?: string;
         };
       };
     };
@@ -372,5 +441,52 @@ function setFirstError(steps: Record<StepId, StepState>) {
     }
   }
   return next;
+}
+
+async function deployCheckpointAdapter({
+  baseModel,
+  jobId,
+  checkpointName,
+}: {
+  baseModel: string;
+  jobId: string;
+  checkpointName: string;
+}) {
+  const timestamp = Date.now().toString(36);
+  const adapterName = `adv-${timestamp}`.slice(0, 32);
+  return postJson<
+    {
+      baseModel: string;
+      jobId: string;
+      checkpointName: string;
+      adapterName: string;
+    },
+    { name: string }
+  >("/api/pipeline/deploy", {
+    body: { baseModel, jobId, checkpointName, adapterName },
+  });
+}
+
+async function waitForModelActivation(name: string) {
+  while (true) {
+    const response = await fetch(
+      `/api/pipeline/model-status?name=${encodeURIComponent(name)}`,
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch deployed model status.");
+    }
+    const payload = (await response.json()) as {
+      data: { status: string; status_reason?: string };
+    };
+    if (payload.data.status === "active") {
+      return payload.data;
+    }
+    if (payload.data.status === "error") {
+      throw new Error(
+        payload.data.status_reason ?? "Nebius reported deployment error",
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+  }
 }
 
