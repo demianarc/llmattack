@@ -24,8 +24,11 @@ export function DatasetPrepCard() {
       splitSize: 200,
       uploadToNebius: false,
       fileName: "advbench_train.jsonl",
+      enableSyntheticAugmentation: true,
+      plinySampleSize: 24,
     },
   });
+  const syntheticEnabled = form.watch("enableSyntheticAugmentation");
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -81,6 +84,30 @@ export function DatasetPrepCard() {
           />
           Upload dataset to Nebius Token Factory immediately
         </label>
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            {...form.register("enableSyntheticAugmentation")}
+            className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          Enrich with synthetic salted / multi-turn refusals
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="font-medium">
+            Pliny-style multi-turn samples (0-100)
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            {...form.register("plinySampleSize", { valueAsNumber: true })}
+            disabled={!syntheticEnabled}
+            className="rounded-2xl border border-zinc-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-zinc-100"
+          />
+          <span className="text-xs text-zinc-500">
+            Set above zero to append ASCII-only Pliny-inspired salted conversations.
+          </span>
+        </label>
 
         {form.formState.errors.splitSize && (
           <p className="text-sm text-rose-500">
@@ -116,6 +143,14 @@ export function DatasetPrepCard() {
                 {result.recordCount}
               </dd>
             </div>
+            {result.syntheticRecordsAdded ? (
+              <div className="flex items-center justify-between">
+                <dt>Synthetic variants</dt>
+                <dd className="font-semibold text-emerald-600">
+                  +{result.syntheticRecordsAdded}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between">
               <dt>Nebius upload</dt>
               <dd className="font-semibold text-emerald-600">
@@ -147,6 +182,16 @@ export function DatasetPrepCard() {
               </li>
             ))}
           </ul>
+          {result?.augmentationSummary && (
+            <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50/80 p-3 text-xs text-zinc-600">
+              <p className="font-semibold text-zinc-800">Augmentations</p>
+              <ul className="mt-2 list-disc space-y-1 pl-4">
+                {result.augmentationSummary.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </StepCard>

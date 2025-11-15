@@ -5,7 +5,7 @@ const HF_BASE_URL = "https://datasets-server.huggingface.co/rows";
 const DATASET_CANDIDATES = ["walledai/AdvBench", "compl-ai/advbench"];
 const MAX_ROWS_PER_REQUEST = 100;
 
-type AdvbenchRow = {
+export type AdvbenchRow = {
   behavior?: string;
   prompt?: string;
   target?: string;

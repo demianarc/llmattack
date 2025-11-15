@@ -21,6 +21,8 @@ import {
   type JailbreakResult,
 } from "@/types/pipeline";
 import { fetchAdvbenchSubset, advbenchToJsonl } from "@/lib/advbench";
+import { generateSyntheticRefusals } from "@/lib/datasets/synthetic";
+import { plinySyntheticJsonl } from "@/lib/synthetic/pliny";
 import { env } from "@/lib/env";
 import { NebiusConfigError } from "@/lib/errors";
 import {
@@ -44,24 +46,62 @@ export async function handleDatasetPrep(
 ): Promise<DatasetPrepResult> {
   const payload = datasetPrepSchema.parse(input);
   const rows = await fetchAdvbenchSubset(payload.splitSize);
-  const result = advbenchToJsonl(rows, payload.fileName);
+  const base = advbenchToJsonl(rows, payload.fileName);
+
+  let jsonl = base.jsonl;
+  let samplePrompts = [...base.samplePrompts];
+  let syntheticRecordsAdded = 0;
+  let augmentationSummary: string[] = [];
+
+  if (payload.enableSyntheticAugmentation) {
+    const synthetic = generateSyntheticRefusals(rows);
+    if (synthetic.records.length) {
+      jsonl = [jsonl, ...synthetic.records].filter(Boolean).join("\n");
+      samplePrompts = [...samplePrompts, ...synthetic.samplePrompts].slice(0, 10);
+      syntheticRecordsAdded += synthetic.records.length;
+      augmentationSummary = synthetic.summary;
+    }
+  }
+
+  if (payload.plinySampleSize > 0) {
+    const pliny = plinySyntheticJsonl(payload.plinySampleSize);
+    if (pliny.recordCount) {
+      jsonl = [jsonl, pliny.jsonl].filter(Boolean).join("\n");
+      samplePrompts = [...samplePrompts, ...pliny.samplePrompts].slice(0, 10);
+      syntheticRecordsAdded += pliny.recordCount;
+      augmentationSummary = [
+        ...augmentationSummary,
+        `Pliny-style multi-turn refusals (${pliny.recordCount})`,
+      ];
+    }
+  }
+
+  const summaryList = augmentationSummary.length ? augmentationSummary : undefined;
 
   if (payload.uploadToNebius && env.isNebiusConfigured) {
     const uploaded = await uploadJsonlToNebius(
-      result.jsonl,
+      jsonl,
       payload.fileName,
     );
     return {
-      ...result,
-      recordCount: rows.length,
+      jsonl,
+      datasetFileName: payload.fileName,
+      recordCount: rows.length + syntheticRecordsAdded,
+      samplePrompts,
+      syntheticRecordsAdded: syntheticRecordsAdded || undefined,
+      augmentationSummary: summaryList,
       uploadedFileId: uploaded.id,
       simulated: false,
     };
   }
 
   return {
-    ...result,
-    recordCount: rows.length,
+    jsonl,
+    datasetFileName: payload.fileName,
+    recordCount: rows.length + syntheticRecordsAdded,
+    samplePrompts,
+    syntheticRecordsAdded: syntheticRecordsAdded || undefined,
+    augmentationSummary: summaryList,
     simulated: !env.isNebiusConfigured,
   };
 }

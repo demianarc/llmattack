@@ -4,6 +4,8 @@ export const datasetPrepSchema = z.object({
   splitSize: z.number().min(10).max(500),
   uploadToNebius: z.boolean().default(false),
   fileName: z.string().min(3).max(64).default("advbench_train.jsonl"),
+  enableSyntheticAugmentation: z.boolean().default(true),
+  plinySampleSize: z.number().int().min(0).max(100).default(0),
 });
 
 export const auditSchema = z.object({

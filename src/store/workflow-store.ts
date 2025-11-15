@@ -4,10 +4,7 @@ import {
   type AuditInput,
   type JailbreakInput,
 } from "@/lib/validators/pipeline";
-import {
-  type AuditResult,
-  type JailbreakResult,
-} from "@/types/pipeline";
+import { type AuditResult, type JailbreakResult } from "@/types/pipeline";
 
 type FineTuneJobState = {
   id: string;
@@ -88,6 +85,7 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
     resetAutomation: () =>
       set({
         datasetPreview: [],
+        datasetFileId: undefined,
         trainingJsonl: undefined,
         fineTuneJob: undefined,
         hardenedModelId: undefined,

@@ -3,6 +3,8 @@ export type DatasetPrepResult = {
   datasetFileName: string;
   recordCount: number;
   samplePrompts: string[];
+  syntheticRecordsAdded?: number;
+  augmentationSummary?: string[];
   uploadedFileId?: string;
   simulated: boolean;
 };

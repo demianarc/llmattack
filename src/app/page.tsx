@@ -1,4 +1,6 @@
 import { WorkflowHero } from "@/components/workflow/hero";
+import { ValueHighlights } from "@/components/workflow/value-highlights";
+import { PipelineOverview } from "@/components/workflow/pipeline-overview";
 import { ModelSelector } from "@/components/workflow/model-selector";
 import { DatasetPrepCard } from "@/components/workflow/dataset-prep-card";
 import { AuditCard } from "@/components/workflow/audit-card";
@@ -13,6 +15,8 @@ export default function Home() {
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 md:px-8 lg:px-12">
       <WorkflowHero />
+      <ValueHighlights />
+      <PipelineOverview />
       <AutomationPanel />
       <ModelSelector />
       <div className="grid gap-6 md:grid-cols-2">
