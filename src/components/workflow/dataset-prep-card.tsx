@@ -11,7 +11,7 @@ import { postJson } from "@/lib/client";
 import { formatPercent } from "@/lib/utils";
 import { z } from "zod";
 
-type FormValues = z.infer<typeof datasetPrepSchema>;
+type FormValues = z.input<typeof datasetPrepSchema>;
 
 export function DatasetPrepCard() {
   const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);

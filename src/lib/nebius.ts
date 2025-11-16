@@ -126,7 +126,6 @@ export async function createFineTuneJob({
       suffix: `advbench-${new Date().toISOString().split("T")[0]}`,
       hyperparameters: {
         batch_size: 8,
-        learning_rate: 0.0001,
         n_epochs: 1,
         warmup_ratio: 0.1,
         weight_decay: 0.01,
@@ -136,7 +135,7 @@ export async function createFineTuneJob({
         lora_dropout: 0.05,
         packing: true,
         max_grad_norm: 1.0,
-      },
+      } as Record<string, unknown>,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown error";
@@ -167,7 +166,8 @@ export async function getFineTuneStatus(jobId: string) {
     return {
       job,
       checkpointFiles: checkpoints.data.flatMap(
-        (checkpoint) => checkpoint.result_files ?? [],
+        (checkpoint) =>
+          (checkpoint as { result_files?: Array<{ id: string }> }).result_files ?? [],
       ),
       latestCheckpoint,
     };

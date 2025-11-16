@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { badgeVariants, cn } from "@/lib/utils";
 import { generateChallengingGuardrailPrompts, EvaluationPrompt } from "@/lib/advanced-evaluation";
 
-type FormValues = z.infer<typeof guardrailsSchema>;
+type FormValues = z.input<typeof guardrailsSchema>;
 
 const DEFAULT_COLANG = `define guard
   user asks harmful

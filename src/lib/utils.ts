@@ -18,6 +18,7 @@ export const badgeVariants = cva(
         warning: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
         danger: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
         info: "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
+        secondary: "bg-zinc-50 text-zinc-700 ring-1 ring-zinc-200",
       },
     },
     defaultVariants: {

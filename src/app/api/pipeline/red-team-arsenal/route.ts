@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
     const attackEffectiveness: Record<string, number[]> = {};
 
     // Initialize tracking objects
-    config.models.forEach(model => modelVulnerabilities[model] = []);
-    config.attacks.forEach(attack => attackEffectiveness[attack] = []);
+    config.models.forEach((model: string) => modelVulnerabilities[model] = []);
+    config.attacks.forEach((attack: string) => attackEffectiveness[attack] = []);
 
     let totalApiCalls = 0;
 

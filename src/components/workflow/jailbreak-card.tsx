@@ -12,7 +12,7 @@ import { JailbreakResult } from "@/types/pipeline";
 import { formatPercent } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
-type FormValues = z.infer<typeof jailbreakSchema>;
+type FormValues = z.input<typeof jailbreakSchema>;
 
 type AttackType = "gcg" | "multi-turn" | "fuzzing" | "token-manip" | "anthropic-style" | "comprehensive";
 
@@ -51,11 +51,16 @@ export function JailbreakCard() {
           ? "hardened"
           : "baseline";
       recordJailbreakResult(stage, result);
-      setLastJailbreakInput(variables);
+      setLastJailbreakInput({
+        modelId: variables.modelId,
+        attackCount: variables.attackCount ?? 15,
+        attackType: variables.attackType ?? "comprehensive",
+      });
     },
   });
 
   const result = mutation.data;
+  const watchedAttackCount = form.watch("attackCount") ?? 15;
 
   return (
     <StepCard
@@ -106,7 +111,7 @@ export function JailbreakCard() {
             {attackType === "comprehensive" && (
               <>
                 <p><strong>All Methods:</strong> GCG, multi-turn escalation, fuzzing, token manipulation, Anthropic-style role-play</p>
-                <p><strong>Total attacks:</strong> {form.watch("attackCount") * 5} ({form.watch("attackCount")} per method)</p>
+                <p><strong>Total attacks:</strong> {watchedAttackCount * 5} ({watchedAttackCount} per method)</p>
               </>
             )}
             {attackType === "gcg" && (

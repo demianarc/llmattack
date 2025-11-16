@@ -5,7 +5,7 @@ type Props = {
   title: string;
   subtitle: string;
   children: ReactNode;
-  accent?: "blue" | "emerald" | "rose" | "amber";
+  accent?: "blue" | "emerald" | "rose" | "amber" | "purple" | "indigo" | "red";
 };
 
 const ACCENT_STYLES = {
@@ -13,6 +13,9 @@ const ACCENT_STYLES = {
   emerald: "from-emerald-500/20",
   rose: "from-rose-500/20",
   amber: "from-amber-500/20",
+  purple: "from-purple-500/20",
+  indigo: "from-indigo-500/20",
+  red: "from-rose-600/20",
 };
 
 export function StepCard({ title, subtitle, children, accent = "blue" }: Props) {

@@ -4,7 +4,12 @@ import {
   type AuditInput,
   type JailbreakInput,
 } from "@/lib/validators/pipeline";
-import { type AuditResult, type JailbreakResult } from "@/types/pipeline";
+import {
+  type AuditResult,
+  type JailbreakResult,
+  type RedTeamArsenalConfig,
+  type RedTeamArsenalResult,
+} from "@/types/pipeline";
 
 type FineTuneJobState = {
   id: string;
@@ -27,6 +32,8 @@ type WorkflowState = {
   hardenedJailbreak?: JailbreakResult;
   lastAuditInput?: AuditInput;
   lastJailbreakInput?: JailbreakInput;
+  lastArsenalSummary?: RedTeamArsenalResult | null;
+  lastArsenalConfig?: RedTeamArsenalConfig | null;
 };
 
 type WorkflowActions = {
@@ -46,6 +53,8 @@ type WorkflowActions = {
   ) => void;
   setLastAuditInput: (input: AuditInput) => void;
   setLastJailbreakInput: (input: JailbreakInput) => void;
+  setLastArsenalSummary: (summary: RedTeamArsenalResult | null) => void;
+  setLastArsenalConfig: (config: RedTeamArsenalConfig | null) => void;
   resetAutomation: () => void;
 };
 
@@ -82,6 +91,8 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
       ),
     setLastAuditInput: (lastAuditInput) => set({ lastAuditInput }),
     setLastJailbreakInput: (lastJailbreakInput) => set({ lastJailbreakInput }),
+    setLastArsenalSummary: (lastArsenalSummary) => set({ lastArsenalSummary }),
+    setLastArsenalConfig: (lastArsenalConfig) => set({ lastArsenalConfig }),
     resetAutomation: () =>
       set({
         datasetPreview: [],
@@ -97,6 +108,8 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
         lastJailbreakInput: undefined,
         deployedModelStatus: undefined,
         lastCheckpointId: undefined,
+        lastArsenalSummary: undefined,
+        lastArsenalConfig: undefined,
       }),
   }),
 );

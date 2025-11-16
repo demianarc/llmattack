@@ -4,7 +4,11 @@ import { useState, useMemo, useEffect } from "react";
 import { StepCard } from "@/components/workflow/step-card";
 import { postJson } from "@/lib/client";
 import { badgeVariants, cn, formatPercent } from "@/lib/utils";
-import type { ArsenalReport } from "@/types/pipeline";
+import type {
+  ArsenalReport,
+  RedTeamArsenalConfig,
+  RedTeamArsenalResult,
+} from "@/types/pipeline";
 import { useWorkflowStore } from "@/store/workflow-store";
 
 // Available models on Nebius
@@ -275,7 +279,7 @@ export function RedTeamArsenal() {
   const [selectedAttacks, setSelectedAttacks] = useState<Set<string>>(new Set());
   const [attemptsPerTest, setAttemptsPerTest] = useState(10);
   const [isRunning, setIsRunning] = useState(false);
-  const [results, setResults] = useState<BatchArsenalResult | null>(null);
+  const [results, setResults] = useState<RedTeamArsenalResult | null>(null);
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [report, setReport] = useState<ArsenalReport | null>(null);
@@ -284,9 +288,18 @@ export function RedTeamArsenal() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [datasetFormat, setDatasetFormat] =
     useState<DatasetFormat>("conversational");
+  const [datasetSize, setDatasetSize] = useState(60);
+  const [datasetLoading, setDatasetLoading] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
   const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);
   const setTrainingJsonl = useWorkflowStore((state) => state.setTrainingJsonl);
+  const setModelId = useWorkflowStore((state) => state.setModelId);
+  const setLastArsenalSummary = useWorkflowStore(
+    (state) => state.setLastArsenalSummary,
+  );
+  const setLastArsenalConfig = useWorkflowStore(
+    (state) => state.setLastArsenalConfig,
+  );
 
   const totalTests = selectedModels.size * selectedAttacks.size;
   const estimatedTime = totalTests * attemptsPerTest * 2; // Rough estimate in seconds
@@ -345,7 +358,7 @@ export function RedTeamArsenal() {
     setReportError(null);
 
     try {
-      const testConfig = {
+      const testConfig: RedTeamArsenalConfig = {
         models: Array.from(selectedModels),
         attacks: Array.from(selectedAttacks),
         attemptsPerTest,
@@ -368,6 +381,8 @@ export function RedTeamArsenal() {
 
       console.log("✅ Setting results state");
       setResults(response);
+      setLastArsenalSummary(response);
+      setLastArsenalConfig(testConfig as RedTeamArsenalConfig);
       console.log("✅ Results state set successfully");
 
     } catch (error) {
@@ -383,7 +398,7 @@ export function RedTeamArsenal() {
     }
   };
 
-  const generateReport = async () => {
+  const generateReport = async (targetSampleCount?: number) => {
     if (!results) return;
     setReportLoading(true);
     setReportError(null);
@@ -400,6 +415,7 @@ export function RedTeamArsenal() {
           sampleJudgeOutcome: result.sampleJudgeOutcome,
           sampleJudgeReason: result.sampleJudgeReason,
         })),
+        targetSampleCount,
       };
 
       const response = await postJson<typeof payload, { report: ArsenalReport; syntheticJsonl: string }>(
@@ -412,6 +428,7 @@ export function RedTeamArsenal() {
       setReportError(error instanceof Error ? error.message : "Failed to generate report");
     } finally {
       setReportLoading(false);
+      setDatasetLoading(false);
     }
   };
 
@@ -424,7 +441,29 @@ export function RedTeamArsenal() {
     }
     setDatasetPreview(report.syntheticSamples.map((sample) => sample.prompt));
     setTrainingJsonl(syntheticJsonlContent);
+    if (results?.summary.mostVulnerableModel) {
+      setModelId(results.summary.mostVulnerableModel);
+    }
     setActionToast("Loaded synthetic refusal dataset into Smart Hardening.");
+  };
+
+  const handleGenerateDataset = async () => {
+    if (!results) {
+      setActionToast("Run Red Team Arsenal before generating a dataset.");
+      return;
+    }
+    setDatasetLoading(true);
+    try {
+      await generateReport(datasetSize);
+      setActionToast(`Generated ${datasetSize} Arsenal-aligned samples.`);
+    } catch (error) {
+      console.error("Dataset generation failed", error);
+      setActionToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate dataset—check console for details.",
+      );
+    }
   };
 
   useEffect(() => {
@@ -704,18 +743,6 @@ export function RedTeamArsenal() {
           </div>
         )}
 
-        {/* Debug: Show raw results if available */}
-        {results && (
-          <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 mb-4">
-            <details>
-              <summary className="text-gray-900 font-medium cursor-pointer">🔍 Debug: Raw API Response</summary>
-              <pre className="text-xs text-gray-700 mt-2 bg-white p-2 rounded overflow-auto max-h-40">
-                {JSON.stringify(results, null, 2)}
-              </pre>
-            </details>
-          </div>
-        )}
-
         {/* Results */}
         {results && results.summary && (
           <div className="space-y-6">
@@ -896,8 +923,34 @@ export function RedTeamArsenal() {
             {/* Action Center */}
             <div className="rounded-2xl border border-purple-100 bg-purple-50/40 p-6 space-y-4">
               <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
+                  Dataset size
+                  <select
+                    value={datasetSize}
+                    onChange={(event) => setDatasetSize(Number(event.target.value))}
+                    className="rounded-lg border border-purple-200 bg-white px-3 py-1 text-xs font-medium text-purple-900"
+                  >
+                    {[40, 60, 100, 200].map((size) => (
+                      <option key={size} value={size}>
+                        {size} samples
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
-                  onClick={generateReport}
+                  onClick={handleGenerateDataset}
+                  disabled={!results || datasetLoading}
+                  className="rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {datasetLoading
+                    ? "Generating dataset..."
+                    : "Generate Arsenal dataset"}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => generateReport()}
                   disabled={reportLoading}
                   className="rounded-xl border border-purple-200 bg-white px-4 py-2 text-sm font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -908,7 +961,7 @@ export function RedTeamArsenal() {
                 )}
               </div>
 
-              {report && (
+              {report && syntheticJsonlContent && (
                 <>
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
@@ -932,15 +985,13 @@ export function RedTeamArsenal() {
                           datasetFileName,
                         )
                       }
-                      disabled={!syntheticJsonlContent}
-                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white"
                     >
                       Download synthetic dataset
                     </button>
                     <button
                       onClick={handleSendToHardening}
-                      disabled={!syntheticJsonlContent}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white"
                     >
                       Send to Smart Hardening
                     </button>

@@ -9,6 +9,7 @@ import {
 import { StepCard } from "@/components/workflow/step-card";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { postJson } from "@/lib/client";
+import { z } from "zod";
 import {
   datasetPrepSchema,
   guardrailsSchema,
@@ -240,7 +241,7 @@ export function AutomationPanel() {
       // Step 1: dataset
       updateStep("dataset", "running");
       const dataset = await postJson<
-        datasetPrepSchema["_output"],
+        z.infer<typeof datasetPrepSchema>,
         DatasetPrepResult
       >("/api/pipeline/dataset", {
         body: {
@@ -389,6 +390,7 @@ export function AutomationPanel() {
       updateStep("fineTune", "success");
 
       // Step 5: audit hardened model
+      updateStep("postAudit", "running");
       const hardenedAudit = await postJson<AuditInput, AuditResult>(
         "/api/pipeline/audit",
         {
@@ -402,6 +404,7 @@ export function AutomationPanel() {
       updateStep("postAudit", "success");
 
       // Step 6: jailbreak hardened
+      updateStep("postJailbreak", "running");
       const hardenedJailbreak = await postJson<
         JailbreakInput,
         JailbreakResult
@@ -415,8 +418,9 @@ export function AutomationPanel() {
       updateStep("postJailbreak", "success");
 
       // Step 7: guardrails smoke test
+      updateStep("guardrails", "running");
       const guardrailRun = await postJson<
-        guardrailsSchema["_output"],
+        z.infer<typeof guardrailsSchema>,
         GuardrailsResult
       >("/api/pipeline/guardrails", {
         body: {

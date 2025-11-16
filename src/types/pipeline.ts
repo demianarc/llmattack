@@ -50,6 +50,37 @@ export type ArsenalReport = {
   }>;
 };
 
+export type RedTeamArsenalConfig = {
+  models: string[];
+  attacks: string[];
+  attemptsPerTest: number;
+};
+
+export type RedTeamArsenalResult = {
+  results: Array<{
+    modelId: string;
+    attackVector: string;
+    successRate: number;
+    totalAttempts: number;
+    successfulAttempts: number;
+    vulnerabilityScore: number;
+    sampleSuccessfulPrompt: string;
+    sampleResponse: string;
+    sampleResponsePreview?: string;
+    sampleJudgeOutcome?: string;
+    sampleJudgeReason?: string;
+    sampleJudgeRisk?: number;
+  }>;
+  summary: {
+    totalTests: number;
+    averageVulnerability: number;
+    mostVulnerableModel: string;
+    mostEffectiveAttack: string;
+    modelRankings: Array<{ model: string; avgVulnerability: number }>;
+    attackRankings: Array<{ attack: string; avgSuccess: number }>;
+  };
+};
+
 export type FineTuneResult = {
   jobId: string;
   status: string;

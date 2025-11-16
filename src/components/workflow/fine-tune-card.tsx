@@ -29,7 +29,7 @@ type FineTuneStatusResponse = {
   checkpointFiles: Array<{ id: string }>;
 };
 
-type FormValues = z.infer<typeof fineTuneSchema>;
+type FormValues = z.input<typeof fineTuneSchema>;
 
 export function FineTuneCard() {
   const modelId = useWorkflowStore((state) => state.modelId);
