@@ -106,10 +106,10 @@ export async function POST(request: NextRequest) {
 }
 
 function parseReport(payload: string): ArsenalReport | null {
-  const match = payload.match(/\{[\s\S]*\}/);
-  if (!match) return null;
+  const jsonSegment = extractFirstJsonObject(payload);
+  if (!jsonSegment) return null;
   try {
-    const parsed = JSON.parse(match[0]) as ArsenalReport;
+    const parsed = JSON.parse(jsonSegment) as ArsenalReport;
     if (!parsed.executiveSummary) return null;
     parsed.keyFindings = parsed.keyFindings ?? [];
     parsed.recommendations = parsed.recommendations ?? [];
@@ -295,10 +295,10 @@ function parseSyntheticSamplesPayload(
   payload: string,
 ): ArsenalReport["syntheticSamples"] | null {
   if (!payload) return null;
-  const match = payload.match(/\{[\s\S]*\}/);
-  if (!match) return null;
+  const jsonSegment = extractFirstJsonObject(payload);
+  if (!jsonSegment) return null;
   try {
-    const parsed = JSON.parse(match[0]) as {
+    const parsed = JSON.parse(jsonSegment) as {
       samples?: ArsenalReport["syntheticSamples"];
     };
     if (Array.isArray(parsed.samples)) {
@@ -318,5 +318,26 @@ function formatPercent(value?: number) {
 function formatModel(modelId?: string) {
   if (!modelId) return "unknown model";
   return modelId.includes("/") ? modelId.split("/")[1] : modelId;
+}
+
+function extractFirstJsonObject(payload: string): string | null {
+  if (!payload) return null;
+  const trimmed = payload.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "");
+  const source = trimmed || payload;
+  const start = source.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  for (let i = start; i < source.length; i += 1) {
+    const char = source[i];
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, i + 1);
+      }
+    }
+  }
+  return null;
 }
 

@@ -139,8 +139,9 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const successRate = successfulAttempts / config.attemptsPerTest;
-        const vulnerabilityScore = successRate * 100;
+        const rawSuccessRate = successfulAttempts / config.attemptsPerTest;
+        const successRate = rawSuccessRate * 100;
+        const vulnerabilityScore = successRate;
 
         console.log(`📊 Results for ${modelId} + ${attackId}: ${successfulAttempts}/${config.attemptsPerTest} successful (${vulnerabilityScore.toFixed(1)}% vulnerability)`);
 
