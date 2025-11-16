@@ -289,7 +289,6 @@ export function RedTeamArsenal() {
   const [datasetFormat, setDatasetFormat] =
     useState<DatasetFormat>("conversational");
   const [datasetSize, setDatasetSize] = useState(60);
-  const [datasetLoading, setDatasetLoading] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
   const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);
   const setTrainingJsonl = useWorkflowStore((state) => state.setTrainingJsonl);
@@ -398,7 +397,7 @@ export function RedTeamArsenal() {
     }
   };
 
-  const generateReport = async (targetSampleCount?: number) => {
+  const generateReport = async (targetSampleCount = datasetSize) => {
     if (!results) return;
     setReportLoading(true);
     setReportError(null);
@@ -428,7 +427,6 @@ export function RedTeamArsenal() {
       setReportError(error instanceof Error ? error.message : "Failed to generate report");
     } finally {
       setReportLoading(false);
-      setDatasetLoading(false);
     }
   };
 
@@ -445,25 +443,6 @@ export function RedTeamArsenal() {
       setModelId(results.summary.mostVulnerableModel);
     }
     setActionToast("Loaded synthetic refusal dataset into Smart Hardening.");
-  };
-
-  const handleGenerateDataset = async () => {
-    if (!results) {
-      setActionToast("Run Red Team Arsenal before generating a dataset.");
-      return;
-    }
-    setDatasetLoading(true);
-    try {
-      await generateReport(datasetSize);
-      setActionToast(`Generated ${datasetSize} Arsenal-aligned samples.`);
-    } catch (error) {
-      console.error("Dataset generation failed", error);
-      setActionToast(
-        error instanceof Error
-          ? error.message
-          : "Failed to generate dataset—check console for details.",
-      );
-    }
   };
 
   useEffect(() => {
@@ -840,89 +819,15 @@ export function RedTeamArsenal() {
               </div>
             </div>
 
-            {/* Actionable Intelligence */}
-            <div className="rounded-2xl border border-green-100 bg-green-50/30 p-6">
-              <h4 className="text-lg font-semibold text-green-900 mb-4">🎯 Security Assessment</h4>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="bg-white p-4 rounded-lg">
-                  {(() => {
-                    const riskMeta = getRiskMeta(results.summary.averageVulnerability);
-                    const isProtected = riskMeta.tone === "protected";
-                    return (
-                      <>
-                  <h5 className="font-semibold text-green-800 mb-2">
-                    {isProtected ? "🛡️ Excellent Protection" : "Priority Targets"}
-                  </h5>
-                  <p className="text-sm text-zinc-600 mb-3">
-                    {isProtected
-                      ? "All tested combinations resisted these vectors. Continue monitoring but prioritize other assets."
-                      : "Focus hardening efforts on these high-risk combinations:"
-                    }
+            {/* Remediation Report & Dataset */}
+            <div className="rounded-2xl border border-purple-100 bg-white p-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-3 justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">
+                    Auto-generated remediation plan
                   </p>
-                  {isProtected ? (
-                    <div className="text-center py-4">
-                      <p className="text-2xl mb-2">🎉</p>
-                      <p className="text-sm text-green-700 font-medium">
-                        No vulnerabilities detected!
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-2">
-                        Models are well-protected against these attack vectors.
-                      </p>
-                    </div>
-                  ) : (
-                    results.results
-                      .filter(r => r.vulnerabilityScore > 30)
-                      .sort((a, b) => b.vulnerabilityScore - a.vulnerabilityScore)
-                      .slice(0, 3)
-                      .map((result) => (
-                        <div key={`${result.modelId}-${result.attackVector}`} className="flex justify-between items-center py-1">
-                          <span className="text-sm">
-                            {result.modelId.split('/')[1]} + {result.attackVector.replace('-', ' ')}
-                          </span>
-                          <span className="text-xs font-medium text-red-600">
-                            {formatPercent(result.successRate)}
-                          </span>
-                        </div>
-                      ))
-                  )}
-                      </>
-                    );
-                  })()}
+                  <h4 className="text-lg font-semibold text-purple-900">Executive Summary & Dataset</h4>
                 </div>
-
-                <div className="bg-white p-4 rounded-lg">
-                  {(() => {
-                    const riskMeta = getRiskMeta(results.summary.averageVulnerability);
-                    const isProtected = riskMeta.tone === "protected";
-                    return (
-                      <>
-                  <h5 className="font-semibold text-green-800 mb-2">Next Steps</h5>
-                  <ul className="text-sm text-zinc-600 space-y-1">
-                    {isProtected ? (
-                      <>
-                        <li>• ✅ Current configurations resisted these prompts</li>
-                        <li>• 🔄 Expand coverage with evolutionary/RL attacks next</li>
-                        <li>• 📊 Archive this run as a known-good baseline</li>
-                        <li>• 🔬 Periodically re-test as new jailbreak families emerge</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>• 🚑 Use the Automation Panel to fine-tune new refusal data immediately</li>
-                        <li>• 🕵️ Focus on {results.summary.mostEffectiveAttack.replace('-', ' ')} vectors to close the biggest hole</li>
-                        <li>• 🛠️ Prioritize {results.summary.mostVulnerableModel.split('/')[1]} for remediation and guardrail updates</li>
-                      </>
-                    )}
-                  </ul>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Center */}
-            <div className="rounded-2xl border border-purple-100 bg-purple-50/40 p-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
                   Dataset size
                   <select
@@ -938,30 +843,25 @@ export function RedTeamArsenal() {
                   </select>
                 </label>
                 <button
-                  onClick={handleGenerateDataset}
-                  disabled={!results || datasetLoading}
-                  className="rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => generateReport(datasetSize)}
+                  disabled={reportLoading || !results}
+                  className="rounded-xl border border-purple-200 bg-purple-600/10 px-4 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {datasetLoading
-                    ? "Generating dataset..."
-                    : "Generate Arsenal dataset"}
+                  {reportLoading
+                    ? `Generating remediation report + ${datasetSize} samples...`
+                    : "Generate remediation report"}
                 </button>
               </div>
+              {reportError && (
+                <p className="text-xs text-rose-600">{reportError}</p>
+              )}
+              {!report && (
+                <p className="text-sm text-zinc-500">
+                  Run the red-team evaluation, then generate a remediation report to unlock guided actions and a synthetic refusal dataset.
+                </p>
+              )}
 
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => generateReport()}
-                  disabled={reportLoading}
-                  className="rounded-xl border border-purple-200 bg-white px-4 py-2 text-sm font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {reportLoading ? "Analyzing..." : "Generate remediation report"}
-                </button>
-                {reportError && (
-                  <p className="text-xs text-rose-600">Report failed: {reportError}</p>
-                )}
-              </div>
-
-              {report && syntheticJsonlContent && (
+              {report && (
                 <>
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
@@ -985,13 +885,15 @@ export function RedTeamArsenal() {
                           datasetFileName,
                         )
                       }
-                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white"
+                      disabled={!syntheticJsonlContent}
+                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Download synthetic dataset
                     </button>
                     <button
                       onClick={handleSendToHardening}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white"
+                      disabled={!syntheticJsonlContent}
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Send to Smart Hardening
                     </button>
@@ -999,83 +901,59 @@ export function RedTeamArsenal() {
                   {actionToast && (
                     <p className="text-xs font-semibold text-emerald-700">{actionToast}</p>
                   )}
+
+                  <p className="text-sm text-zinc-700">{report.executiveSummary}</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-purple-500 mb-2">
+                        Key Findings
+                      </p>
+                      <ul className="space-y-2 text-sm text-purple-900 list-disc pl-4">
+                        {report.keyFindings.map((finding) => (
+                          <li key={finding}>{finding}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500 mb-2">
+                        Recommendations
+                      </p>
+                      <ul className="space-y-2 text-sm text-emerald-900 list-disc pl-4">
+                        {report.recommendations.map((rec) => (
+                          <li key={rec}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  {report.syntheticSamples.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-zinc-900">Synthetic dataset seeds</p>
+                      <div className="space-y-3">
+                        {report.syntheticSamples.map((sample, index) => (
+                          <div
+                            key={`${sample.attackVector}-${index}`}
+                            className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
+                          >
+                            <p className="font-semibold text-zinc-900">
+                              {sample.attackVector} · seed #{index + 1}
+                            </p>
+                            <p className="font-mono text-zinc-700 bg-white rounded p-2">
+                              {sample.prompt}
+                            </p>
+                            <p className="text-zinc-600">
+                              <strong>Desired refusal:</strong> {sample.assistantRefusal}
+                            </p>
+                            {sample.rationale && (
+                              <p className="text-zinc-500 italic">{sample.rationale}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
-
-            {/* Remediation Report */}
-            {report && (
-              <div className="rounded-2xl border border-purple-100 bg-white p-6 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">
-                      Auto-generated remediation plan
-                    </p>
-                    <h4 className="text-lg font-semibold text-purple-900">Executive Summary</h4>
-                  </div>
-                  <button
-                    onClick={() =>
-                      downloadJsonl(
-                        syntheticJsonlContent,
-                        datasetFileName,
-                      )
-                    }
-                    className="text-xs font-semibold text-emerald-700 hover:underline"
-                  >
-                    Download dataset ({datasetFormat})
-                  </button>
-                </div>
-                <p className="text-sm text-zinc-700">{report.executiveSummary}</p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-500 mb-2">
-                      Key Findings
-                    </p>
-                    <ul className="space-y-2 text-sm text-purple-900 list-disc pl-4">
-                      {report.keyFindings.map((finding) => (
-                        <li key={finding}>{finding}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500 mb-2">
-                      Recommendations
-                    </p>
-                    <ul className="space-y-2 text-sm text-emerald-900 list-disc pl-4">
-                      {report.recommendations.map((rec) => (
-                        <li key={rec}>{rec}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                {report.syntheticSamples.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold text-zinc-900">Synthetic dataset seeds</p>
-                    <div className="space-y-3">
-                      {report.syntheticSamples.map((sample, index) => (
-                        <div
-                          key={`${sample.attackVector}-${index}`}
-                          className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
-                        >
-                          <p className="font-semibold text-zinc-900">
-                            {sample.attackVector} · seed #{index + 1}
-                          </p>
-                          <p className="font-mono text-zinc-700 bg-white rounded p-2">
-                            {sample.prompt}
-                          </p>
-                          <p className="text-zinc-600">
-                            <strong>Desired refusal:</strong> {sample.assistantRefusal}
-                          </p>
-                          {sample.rationale && (
-                            <p className="text-zinc-500 italic">{sample.rationale}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Detailed Results (Collapsible) */}
             <details className="rounded-2xl border border-zinc-100 bg-white">
