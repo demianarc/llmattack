@@ -38,6 +38,18 @@ export type JailbreakResult = {
   simulated: boolean;
 };
 
+export type ArsenalReport = {
+  executiveSummary: string;
+  keyFindings: string[];
+  recommendations: string[];
+  syntheticSamples: Array<{
+    attackVector: string;
+    prompt: string;
+    assistantRefusal: string;
+    rationale?: string;
+  }>;
+};
+
 export type FineTuneResult = {
   jobId: string;
   status: string;

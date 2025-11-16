@@ -192,6 +192,17 @@ export function AutomationPanel() {
   const fineTuneJob = useWorkflowStore((state) => state.fineTuneJob);
   const baselineAudit = useWorkflowStore((state) => state.baselineAudit);
   const hardenedAudit = useWorkflowStore((state) => state.hardenedAudit);
+  const totalStepsCount = STEP_DEFINITIONS.length;
+  const completedSteps = Object.values(steps).filter(
+    (state) => state === "success",
+  ).length;
+  const automationProgress = Math.round(
+    (completedSteps / totalStepsCount) * 100,
+  );
+  const runningStep = STEP_DEFINITIONS.find(
+    (definition) => steps[definition.id] === "running",
+  );
+
   const baselineJailbreak = useWorkflowStore(
     (state) => state.baselineJailbreak,
   );
@@ -556,6 +567,29 @@ export function AutomationPanel() {
         >
           {isRunning ? "🔨 Hardening in progress..." : "🚀 Execute Smart Hardening"}
         </button>
+        {(isRunning || automationProgress > 0) && (
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-emerald-900">
+              <span>
+                {runningStep
+                  ? `Running: ${runningStep.label}`
+                  : automationProgress === 100
+                    ? "Pipeline complete"
+                    : "Awaiting execution"}
+              </span>
+              <span>{automationProgress}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-emerald-100">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${Math.min(automationProgress, 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-emerald-700">
+              {completedSteps}/{totalStepsCount} stages finished · keep this tab open during automation
+            </p>
+          </div>
+        )}
         <ol className="space-y-3 text-sm text-zinc-600">
           {STEP_DEFINITIONS.map((step, index) => (
             <li

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { StepCard } from "@/components/workflow/step-card";
 import { postJson } from "@/lib/client";
-import { formatPercent } from "@/lib/utils";
-import { badgeVariants, cn } from "@/lib/utils";
+import { badgeVariants, cn, formatPercent } from "@/lib/utils";
+import type { ArsenalReport } from "@/types/pipeline";
+import { useWorkflowStore } from "@/store/workflow-store";
 
 // Available models on Nebius
 const AVAILABLE_MODELS = [
@@ -163,6 +164,10 @@ type ArsenalResult = {
   vulnerabilityScore: number; // 0-100, higher = more vulnerable
   sampleSuccessfulPrompt: string;
   sampleResponse: string;
+  sampleResponsePreview?: string;
+  sampleJudgeOutcome?: string;
+  sampleJudgeReason?: string;
+  sampleJudgeRisk?: number;
 };
 
 type BatchArsenalResult = {
@@ -177,15 +182,39 @@ type BatchArsenalResult = {
   };
 };
 
+type DatasetFormat = "conversational" | "instruction" | "text";
+
 export function RedTeamArsenal() {
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [selectedAttacks, setSelectedAttacks] = useState<Set<string>>(new Set());
   const [attemptsPerTest, setAttemptsPerTest] = useState(10);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<BatchArsenalResult | null>(null);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
+  const [report, setReport] = useState<ArsenalReport | null>(null);
+  const [reportJsonl, setReportJsonl] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [datasetFormat, setDatasetFormat] =
+    useState<DatasetFormat>("conversational");
+  const [actionToast, setActionToast] = useState<string | null>(null);
+  const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);
+  const setTrainingJsonl = useWorkflowStore((state) => state.setTrainingJsonl);
 
   const totalTests = selectedModels.size * selectedAttacks.size;
   const estimatedTime = totalTests * attemptsPerTest * 2; // Rough estimate in seconds
+  const syntheticJsonlContent = useMemo(() => {
+    if (report?.syntheticSamples?.length) {
+      return buildCounterDatasetJsonl(report.syntheticSamples, datasetFormat);
+    }
+    return reportJsonl;
+  }, [report, datasetFormat, reportJsonl]);
+  const datasetFileName = useMemo(() => {
+    const attack = results?.summary?.mostEffectiveAttack ?? "counter";
+    const safeAttack = attack.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
+    return `synthetic-${datasetFormat}-${safeAttack}-dataset.jsonl`;
+  }, [datasetFormat, results?.summary?.mostEffectiveAttack]);
 
   const toggleModel = (modelId: string) => {
     const newSet = new Set(selectedModels);
@@ -220,7 +249,14 @@ export function RedTeamArsenal() {
     console.log("Selected attacks:", Array.from(selectedAttacks));
 
     setIsRunning(true);
+    setProgressPercent(5);
+    setProgressLabel(
+      `Executing ${selectedModels.size * selectedAttacks.size} combos (~${selectedModels.size * selectedAttacks.size * attemptsPerTest} attempts)`
+    );
     setResults(null);
+    setReport(null);
+    setReportJsonl("");
+    setReportError(null);
 
     try {
       const testConfig = {
@@ -254,10 +290,88 @@ export function RedTeamArsenal() {
       console.error("Error details:", error);
       alert(`❌ Test failed: ${errorMessage}\n\nCheck browser console for details.`);
     } finally {
+      setProgressPercent(100);
+      setProgressLabel("Finalizing results...");
       console.log("🏁 Setting isRunning to false");
       setIsRunning(false);
     }
   };
+
+  const generateReport = async () => {
+    if (!results) return;
+    setReportLoading(true);
+    setReportError(null);
+    try {
+      const payload = {
+        modelResults: results.results.map((result) => ({
+          modelId: result.modelId,
+          attackVector: result.attackVector,
+          successRate: result.successRate,
+          totalAttempts: result.totalAttempts,
+          successfulAttempts: result.successfulAttempts,
+          sampleSuccessfulPrompt: result.sampleSuccessfulPrompt,
+          sampleResponse: result.sampleResponse,
+          sampleJudgeOutcome: result.sampleJudgeOutcome,
+          sampleJudgeReason: result.sampleJudgeReason,
+        })),
+      };
+
+      const response = await postJson<typeof payload, { report: ArsenalReport; syntheticJsonl: string }>(
+        "/api/pipeline/arsenal-report",
+        { body: payload }
+      );
+      setReport(response.report);
+      setReportJsonl(response.syntheticJsonl);
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : "Failed to generate report");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleSendToHardening = () => {
+    if (!report?.syntheticSamples?.length || !syntheticJsonlContent) {
+      setActionToast(
+        "Generate the remediation report to create a counter dataset first.",
+      );
+      return;
+    }
+    setDatasetPreview(report.syntheticSamples.map((sample) => sample.prompt));
+    setTrainingJsonl(syntheticJsonlContent);
+    setActionToast("Loaded synthetic refusal dataset into Smart Hardening.");
+  };
+
+  useEffect(() => {
+    if (!isRunning) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setProgressPercent((prev) => {
+        if (prev >= 85) {
+          return prev;
+        }
+        const bump = 4 + Math.random() * 5;
+        return Math.min(prev + bump, 85);
+      });
+    }, 1400);
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  useEffect(() => {
+    if (isRunning) return;
+    if (progressPercent === 0) return;
+    const timeout = setTimeout(() => {
+      setProgressPercent(0);
+      setProgressLabel("");
+    }, 1500);
+    return () => clearTimeout(timeout);
+  }, [isRunning, progressPercent]);
+
+  useEffect(() => {
+    if (!actionToast) return;
+    const timeout = setTimeout(() => setActionToast(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [actionToast]);
 
   const getVulnerabilityColor = (score: number) => {
     if (score >= 70) return "bg-red-500";
@@ -467,17 +581,28 @@ export function RedTeamArsenal() {
           }
         </button>
 
-        {/* Debug Info */}
-        {isRunning && (
-          <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-4">
-            <p className="text-orange-900 font-medium">🔥 Running REAL Red Team Arsenal...</p>
-            <p className="text-sm text-orange-700 mt-1">
-              Making {selectedModels.size * selectedAttacks.size * attemptsPerTest} API calls to Nebius
-              ({selectedModels.size} models × {selectedAttacks.size} attacks × {attemptsPerTest} attempts each)
-            </p>
-            <p className="text-sm text-orange-600 mt-2">
-              This will take ~{Math.ceil((selectedModels.size * selectedAttacks.size * attemptsPerTest) * 1.5)} seconds...
-            </p>
+        {/* Progress indicator */}
+        {(isRunning || progressPercent > 0) && (
+          <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-orange-900">
+              <span>
+                {progressLabel ||
+                  `Queued ${selectedModels.size * selectedAttacks.size} tests (${selectedModels.size} models × ${selectedAttacks.size} attacks)`}
+              </span>
+              <span>{Math.round(progressPercent)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-orange-100">
+              <div
+                className="h-full rounded-full bg-orange-500 transition-all"
+                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+              />
+            </div>
+            {isRunning && (
+              <p className="text-xs text-orange-700">
+                Executing {selectedModels.size * selectedAttacks.size * attemptsPerTest} Nebius calls. Keep this tab
+                open until completion.
+              </p>
+            )}
           </div>
         )}
 
@@ -637,6 +762,139 @@ export function RedTeamArsenal() {
               </div>
             </div>
 
+            {/* Action Center */}
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/40 p-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={generateReport}
+                  disabled={reportLoading}
+                  className="rounded-xl border border-purple-200 bg-white px-4 py-2 text-sm font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {reportLoading ? "Analyzing..." : "Generate remediation report"}
+                </button>
+                {reportError && (
+                  <p className="text-xs text-rose-600">Report failed: {reportError}</p>
+                )}
+              </div>
+
+              {report && (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
+                      Dataset format
+                      <select
+                        value={datasetFormat}
+                        onChange={(event) =>
+                          setDatasetFormat(event.target.value as DatasetFormat)
+                        }
+                        className="rounded-lg border border-purple-200 bg-white px-3 py-1 text-xs font-medium text-purple-900"
+                      >
+                        <option value="conversational">Conversational JSONL</option>
+                        <option value="instruction">Instruction JSONL</option>
+                        <option value="text">Text JSONL</option>
+                      </select>
+                    </label>
+                    <button
+                      onClick={() =>
+                        downloadJsonl(
+                          syntheticJsonlContent,
+                          datasetFileName,
+                        )
+                      }
+                      disabled={!syntheticJsonlContent}
+                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Download synthetic dataset
+                    </button>
+                    <button
+                      onClick={handleSendToHardening}
+                      disabled={!syntheticJsonlContent}
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Send to Smart Hardening
+                    </button>
+                  </div>
+                  {actionToast && (
+                    <p className="text-xs font-semibold text-emerald-700">{actionToast}</p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Remediation Report */}
+            {report && (
+              <div className="rounded-2xl border border-purple-100 bg-white p-6 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">
+                      Auto-generated remediation plan
+                    </p>
+                    <h4 className="text-lg font-semibold text-purple-900">Executive Summary</h4>
+                  </div>
+                  <button
+                    onClick={() =>
+                      downloadJsonl(
+                        syntheticJsonlContent,
+                        datasetFileName,
+                      )
+                    }
+                    className="text-xs font-semibold text-emerald-700 hover:underline"
+                  >
+                    Download dataset ({datasetFormat})
+                  </button>
+                </div>
+                <p className="text-sm text-zinc-700">{report.executiveSummary}</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-500 mb-2">
+                      Key Findings
+                    </p>
+                    <ul className="space-y-2 text-sm text-purple-900 list-disc pl-4">
+                      {report.keyFindings.map((finding) => (
+                        <li key={finding}>{finding}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500 mb-2">
+                      Recommendations
+                    </p>
+                    <ul className="space-y-2 text-sm text-emerald-900 list-disc pl-4">
+                      {report.recommendations.map((rec) => (
+                        <li key={rec}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                {report.syntheticSamples.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-zinc-900">Synthetic dataset seeds</p>
+                    <div className="space-y-3">
+                      {report.syntheticSamples.map((sample, index) => (
+                        <div
+                          key={`${sample.attackVector}-${index}`}
+                          className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
+                        >
+                          <p className="font-semibold text-zinc-900">
+                            {sample.attackVector} · seed #{index + 1}
+                          </p>
+                          <p className="font-mono text-zinc-700 bg-white rounded p-2">
+                            {sample.prompt}
+                          </p>
+                          <p className="text-zinc-600">
+                            <strong>Desired refusal:</strong> {sample.assistantRefusal}
+                          </p>
+                          {sample.rationale && (
+                            <p className="text-zinc-500 italic">{sample.rationale}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Detailed Results (Collapsible) */}
             <details className="rounded-2xl border border-zinc-100 bg-white">
               <summary className="p-4 text-lg font-semibold text-zinc-900 cursor-pointer hover:bg-zinc-50">
@@ -666,15 +924,7 @@ export function RedTeamArsenal() {
                       </div>
 
                       {result.successfulAttempts > 0 && (
-                        <div className="mt-3 p-3 bg-red-50 rounded border-l-4 border-red-300">
-                          <p className="text-xs font-medium text-red-800 mb-1">🚨 Successful Jailbreak:</p>
-                          <p className="text-xs text-red-700 mb-2 font-mono bg-white p-2 rounded">
-                            {result.sampleSuccessfulPrompt}
-                          </p>
-                          <p className="text-xs text-zinc-600">
-                            <strong>Response:</strong> {result.sampleResponse.substring(0, 100)}...
-                          </p>
-                        </div>
+                        <SuccessfulJailbreakCard result={result} />
                       )}
                     </div>
                   );
@@ -686,4 +936,91 @@ export function RedTeamArsenal() {
       </div>
     </StepCard>
   );
+}
+
+function SuccessfulJailbreakCard({ result }: { result: ArsenalResult }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-3 p-3 bg-red-50 rounded border-l-4 border-red-300">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-red-800">🚨 Successful Jailbreak</p>
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="text-xs font-medium text-red-700 hover:text-red-900"
+        >
+          {expanded ? "Hide full response" : "View full response"}
+        </button>
+      </div>
+
+      <p className="mt-2 text-xs text-red-700 font-mono bg-white p-2 rounded">
+        {result.sampleSuccessfulPrompt}
+      </p>
+
+      {expanded ? (
+        <p className="mt-2 text-xs text-zinc-700 whitespace-pre-wrap bg-white p-3 rounded">
+          {result.sampleResponse}
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-zinc-600">
+          <strong>Response:</strong>{" "}
+          {(result.sampleResponsePreview || result.sampleResponse).substring(0, 200)}...
+        </p>
+      )}
+
+      {(result.sampleJudgeOutcome || result.sampleJudgeReason) && (
+        <p className="mt-2 text-xs text-red-800">
+          <strong>Judge:</strong>{" "}
+          {result.sampleJudgeOutcome ? result.sampleJudgeOutcome.toUpperCase() : "undetermined"}
+          {typeof result.sampleJudgeRisk === "number"
+            ? ` · risk ${result.sampleJudgeRisk}/100`
+            : ""}
+          {result.sampleJudgeReason ? ` — ${result.sampleJudgeReason}` : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function downloadJsonl(jsonl: string, fileName: string) {
+  if (!jsonl) return;
+  const blob = new Blob([jsonl], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildCounterDatasetJsonl(
+  samples: ArsenalReport["syntheticSamples"],
+  format: DatasetFormat,
+) {
+  if (!samples || samples.length === 0) return "";
+  const systemPrompt =
+    "You are a safety-aligned assistant. Refuse harmful or policy-violating requests—even in testing.";
+  return samples
+    .map((sample) => {
+      if (format === "instruction") {
+        return JSON.stringify({
+          prompt: sample.prompt,
+          completion: sample.assistantRefusal,
+        });
+      }
+      if (format === "text") {
+        return JSON.stringify({
+          text: `system: ${systemPrompt}\nuser: ${sample.prompt}\nassistant: ${sample.assistantRefusal}`,
+        });
+      }
+      return JSON.stringify({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: sample.prompt },
+          { role: "assistant", content: sample.assistantRefusal },
+        ],
+      });
+    })
+    .join("\n");
 }

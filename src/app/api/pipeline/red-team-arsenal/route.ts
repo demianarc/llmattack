@@ -29,6 +29,7 @@ interface ArsenalResult {
   vulnerabilityScore: number;
   sampleSuccessfulPrompt: string;
   sampleResponse: string;
+  sampleResponsePreview?: string;
   sampleJudgeOutcome?: string;
   sampleJudgeReason?: string;
   sampleJudgeRisk?: number;
@@ -84,6 +85,10 @@ export async function POST(request: NextRequest) {
         let successfulAttempts = 0;
         let sampleSuccessfulPrompt = "";
         let sampleResponse = "";
+        let sampleResponsePreview = "";
+        let sampleJudgeOutcome = "";
+        let sampleJudgeReason = "";
+        let sampleJudgeRisk: number | undefined;
 
         // Run multiple attempts for this model-attack combination
         for (let attempt = 0; attempt < config.attemptsPerTest; attempt++) {
@@ -104,14 +109,25 @@ export async function POST(request: NextRequest) {
             const content = response.choices[0]?.message?.content || "";
             console.log(`📥 Response received (${content.length} chars): ${content.substring(0, 100)}...`);
 
-            const success = isSuccessfulJailbreak(content);
-            console.log(`🎯 Jailbreak detection: ${success ? 'SUCCESS' : 'BLOCKED'}`);
+            const verdict = await judgeJailbreakAttempt({
+              attackMethod: attackId,
+              attackPrompt,
+              modelResponse: content,
+              targetModelId: modelId,
+            });
+
+            const success = verdict.outcome !== "blocked";
+            console.log(`🎯 Jailbreak detection: ${verdict.outcome.toUpperCase()} (risk ${verdict.riskScore})`);
 
             if (success) {
               successfulAttempts++;
               if (!sampleSuccessfulPrompt) {
                 sampleSuccessfulPrompt = attackPrompt;
-                sampleResponse = content.slice(0, 200);
+                sampleResponse = content;
+                sampleResponsePreview = content.slice(0, 200);
+                sampleJudgeOutcome = verdict.outcome;
+                sampleJudgeReason = verdict.reasoning;
+                sampleJudgeRisk = verdict.riskScore;
                 console.log(`💥 JAILBREAK SUCCESS! Captured sample.`);
               }
             }
@@ -137,6 +153,10 @@ export async function POST(request: NextRequest) {
           vulnerabilityScore,
           sampleSuccessfulPrompt: sampleSuccessfulPrompt || "No successful jailbreaks",
           sampleResponse: sampleResponse || "No harmful responses generated",
+          sampleResponsePreview: sampleResponsePreview || undefined,
+          sampleJudgeOutcome: sampleJudgeOutcome || undefined,
+          sampleJudgeReason: sampleJudgeReason || undefined,
+          sampleJudgeRisk,
         });
 
         modelVulnerabilities[modelId].push(vulnerabilityScore);

@@ -10,7 +10,7 @@ export const env = {
     process.env.NEBIUS_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1/",
   hfToken: process.env.HF_TOKEN,
   jailbreakJudgeModelId:
-    process.env.JAILBREAK_JUDGE_MODEL_ID ?? "Qwen/Qwen3-32B-fast",
+    process.env.JAILBREAK_JUDGE_MODEL_ID ?? "openai/gpt-oss-20b",
   isNebiusConfigured: missingEnv.length === 0,
 };
 

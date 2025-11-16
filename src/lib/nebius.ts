@@ -47,12 +47,18 @@ type GuardrailsCall = {
   modelId: string;
   prompt: string;
   systemPrompt: string;
+  maxTokens?: number;
+  temperature?: number;
+  responseFormat?: { type: "json_object" } | { type: "text" };
 };
 
 export async function callNebiusChat({
   modelId,
   prompt,
   systemPrompt,
+  maxTokens,
+  temperature,
+  responseFormat,
 }: GuardrailsCall) {
   if (!env.nebiusApiKey) {
     throw new NebiusConfigError();
@@ -61,8 +67,9 @@ export async function callNebiusChat({
   const client = getNebiusClient();
   const response = await client.chat.completions.create({
     model: modelId,
-    temperature: 0,
-    max_tokens: 512,
+    temperature: typeof temperature === "number" ? temperature : 0,
+    max_tokens: maxTokens ?? 512,
+    response_format: responseFormat,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
