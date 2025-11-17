@@ -1,31 +1,31 @@
-const STAGES = [
+const FLOW = [
   {
     id: "arsenal",
-    label: "01",
-    title: "Red Team Arsenal Assessment",
-    objective: "Systematically test frontier AI models against 6 sophisticated attack vectors inspired by the Anthropic cyber espionage incident.",
-    output: "Comprehensive vulnerability rankings, attack effectiveness metrics, and jailbreak success rates across all tested models.",
+    label: "Step 1",
+    title: "Run Jailbreak Arsenal",
+    objective: "Hammer selected OSS checkpoints with Many-Shot, TombRaider, Function Smuggle, and other incident-grade vectors.",
+    output: "Ranked leak list, per-attack success rates, and judge reasoning for every exploit.",
   },
   {
-    id: "target",
-    label: "02",
-    title: "Target Selection & Data Prep",
-    objective: "Identify most vulnerable models and prepare targeted defense datasets using advanced enrichment techniques.",
-    output: "Prioritized hardening targets + enriched JSONL with Pliny-style defenses, salting, and multi-turn training data.",
+    id: "insights",
+    label: "Step 2",
+    title: "Generate Intelligence Pack",
+    objective: "Convert the winning jailbreaks into high-signal synthetic refusals tailored to the vulnerable model.",
+    output: "Conversational JSONL with offense-aligned prompts and grounded refusal language.",
   },
   {
-    id: "harden",
-    label: "03",
-    title: "Enterprise Hardening Pipeline",
-    objective: "Execute comprehensive fine-tuning with layered defenses, guardrails, and multi-vector validation.",
-    output: "Hardened model checkpoints, guardrail configurations, and before/after security metrics.",
+    id: "hardening",
+    label: "Step 3",
+    title: "Fine-Tune + Guard",
+    objective: "Launch LoRA training, deploy the checkpoint, and smoke-test guardrails against the same prompts.",
+    output: "Deployed adapter ID, guardrail policy verdicts, and before/after refusal evidence.",
   },
   {
-    id: "verify",
-    label: "04",
-    title: "Continuous Security Validation",
-    objective: "Run ongoing verification against new attack vectors and provide auto-generated hardening recommendations.",
-    output: "Security compliance reports, vulnerability deltas, and actionable remediation suggestions.",
+    id: "validation",
+    label: "Step 4",
+    title: "Publish Security Delta",
+    objective: "Re-run the arsenal on the hardened model to measure jailbreak reduction and document compliance.",
+    output: "Executive remediation report ready for security leadership and auditors.",
   },
 ];
 
@@ -34,25 +34,23 @@ export function PipelineOverview() {
     <section className="rounded-3xl border border-zinc-100 bg-white/90 p-6 shadow-lg shadow-sky-950/5 ring-1 ring-black/5">
       <header className="mb-6">
         <p className="text-sm font-semibold uppercase tracking-widest text-zinc-400">
-          Enterprise AI Red Teaming Framework
+          JailbreakLLM workflow
         </p>
         <h2 className="mt-1 text-2xl font-semibold text-zinc-900">
-          Four-Phase Security Assessment & Hardening Protocol
+          From exploit to remediation in four focused passes
         </h2>
         <p className="mt-2 text-sm text-zinc-600">
-          Inspired by the Anthropic cyber espionage incident, this framework provides systematic evaluation
-          of frontier AI models against sophisticated attack vectors, followed by targeted hardening
-          and continuous validation. No smoke screens—just measurable security improvements.
+          No fluff—just a repeatable loop that starts with real jailbreak pressure, ends with hardened adapters, and proves the delta with evidence.
         </p>
       </header>
       <ol className="space-y-6">
-        {STAGES.map((stage, index) => (
+        {FLOW.map((stage, index) => (
           <li key={stage.id} className="flex gap-4">
             <div className="flex flex-col items-center">
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">
                 {stage.label}
               </span>
-              {index < STAGES.length - 1 && (
+              {index < FLOW.length - 1 && (
                 <span className="h-full w-px bg-gradient-to-b from-slate-200 to-transparent" />
               )}
             </div>
