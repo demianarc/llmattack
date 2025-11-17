@@ -1,3 +1,5 @@
+import { NEBIUS_FINE_TUNE_MODEL_IDS } from "@/lib/models";
+
 const REQUIRED_ENV = ["NEBIUS_API_KEY"] as const;
 
 const missingEnv = REQUIRED_ENV.filter(
@@ -15,7 +17,7 @@ export const env = {
 };
 
 export const telemetry = {
-  appName: "Nebius OSS AI Red-Teaming Service",
-  defaultModel: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  appName: "JailbreakLLM Control Room",
+  defaultModel: NEBIUS_FINE_TUNE_MODEL_IDS[0],
 };
 

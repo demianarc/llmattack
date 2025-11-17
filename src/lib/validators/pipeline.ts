@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NEBIUS_FINE_TUNE_MODEL_IDS } from "@/lib/models";
 
 export const datasetPrepSchema = z.object({
   splitSize: z.number().min(10).max(500),
@@ -32,7 +33,7 @@ export const jailbreakSchema = z.object({
 });
 
 export const fineTuneSchema = z.object({
-  modelId: z.string().min(3),
+  modelId: z.enum(NEBIUS_FINE_TUNE_MODEL_IDS),
   trainingJsonl: z.string().min(10, "JSONL payload is required"),
   fileName: z.string().min(3).max(80).default("advbench_train.jsonl"),
 });

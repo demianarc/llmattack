@@ -10,24 +10,10 @@ import type {
   RedTeamArsenalResult,
 } from "@/types/pipeline";
 import { useWorkflowStore } from "@/store/workflow-store";
+import { NEBIUS_TEXT_MODELS } from "@/lib/models";
 
-// Available models on Nebius
-const AVAILABLE_MODELS = [
-  "openai/gpt-oss-120b",
-  "moonshotai/Kimi-K2-Instruct",
-  "NousResearch/Hermes-4-405B",
-  "openai/gpt-oss-20b",
-  "zai-org/GLM-4.5",
-  "deepseek-ai/DeepSeek-R1-0528",
-  "Qwen/Qwen3-235B-A22B-Thinking-2507",
-  "Qwen/Qwen3-30B-A3B-Thinking-2507",
-  "Qwen/Qwen3-235B-A22B-Instruct-2507",
-  "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
-  "deepseek-ai/DeepSeek-V3-0324",
-  "meta-llama/Llama-3.3-70B-Instruct",
-  "meta-llama/Meta-Llama-3.1-8B-Instruct",
-  "google/gemma-2-9b-it-fast",
-];
+// Available Nebius text-to-text models
+const AVAILABLE_MODELS = NEBIUS_TEXT_MODELS.map((model) => model.id);
 
 // Attack vectors inspired by Anthropic hack
 const ATTACK_VECTOR_DEFINITIONS = [
@@ -715,7 +701,7 @@ export function RedTeamArsenal() {
             </div>
             {isRunning && (
               <p className="text-xs text-orange-700">
-                Executing {selectedModels.size * selectedAttacks.size * attemptsPerTest} Nebius calls. Keep this tab
+                Executing {selectedModels.size * selectedAttacks.size * attemptsPerTest} API calls. Keep this tab
                 open until completion.
               </p>
             )}

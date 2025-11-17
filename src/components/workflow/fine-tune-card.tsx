@@ -18,6 +18,11 @@ import {
   JailbreakResult,
 } from "@/types/pipeline";
 import { useEffect } from "react";
+import {
+  NEBIUS_FINE_TUNE_MODEL_IDS,
+  NEBIUS_FINE_TUNE_MODELS,
+  isFineTunableModel,
+} from "@/lib/models";
 
 type FineTuneStatusResponse = {
   job: {
@@ -54,17 +59,25 @@ export function FineTuneCard() {
     (state) => state.recordJailbreakResult,
   );
 
+  const defaultFineTuneModel = isFineTunableModel(modelId)
+    ? modelId
+    : NEBIUS_FINE_TUNE_MODEL_IDS[0];
+
   const form = useForm<FormValues>({
     resolver: zodResolver(fineTuneSchema),
     defaultValues: {
-      modelId,
+      modelId: defaultFineTuneModel,
       fileName: "advbench_train.jsonl",
       trainingJsonl: trainingJsonl ?? "",
     },
   });
 
   useEffect(() => {
-    form.setValue("modelId", modelId);
+    if (isFineTunableModel(modelId)) {
+      form.setValue("modelId", modelId);
+    } else {
+      form.setValue("modelId", NEBIUS_FINE_TUNE_MODEL_IDS[0]);
+    }
   }, [form, modelId]);
 
   useEffect(() => {
@@ -170,7 +183,7 @@ export function FineTuneCard() {
   return (
     <StepCard
       title="Adversarial fine-tuning"
-      subtitle="Kick off Nebius LoRA job against curated AdvBench refusals"
+      subtitle="Kick off a LoRA job against curated AdvBench refusals"
       accent="amber"
     >
       {!datasetReady && (
@@ -183,6 +196,33 @@ export function FineTuneCard() {
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
         className="mt-4 flex flex-col gap-4 text-sm text-zinc-700"
       >
+        {!isFineTunableModel(modelId) && (
+          <p className="rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-2 text-xs text-amber-700">
+            {modelId
+              ? `Current red-team target ${modelId} cannot be fine-tuned. Select a LoRA-ready checkpoint below—datasets from the jailbreak runs are still valid.`
+              : "Select a LoRA-ready checkpoint below—datasets from jailbreak runs are still valid."}
+          </p>
+        )}
+
+        <label className="flex flex-col gap-2">
+          <span className="font-medium">LoRA-ready Nebius model</span>
+          <select
+            {...form.register("modelId")}
+            className="rounded-2xl border border-zinc-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
+            disabled={!datasetReady || mutation.isPending}
+          >
+            {NEBIUS_FINE_TUNE_MODELS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.id} · {option.provider}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-zinc-500">
+            Only Meta&apos;s LoRA-ready checkpoints are deployable via the
+            Nebius Token Factory today.
+          </span>
+        </label>
+
         <label className="flex flex-col gap-2">
           <span className="font-medium">Training file name</span>
           <input
@@ -204,7 +244,7 @@ export function FineTuneCard() {
           disabled={!datasetReady || mutation.isPending}
           className="rounded-2xl bg-amber-600 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-600/30 transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {mutation.isPending ? "Starting job..." : "Launch Nebius FT job"}
+          {mutation.isPending ? "Starting job..." : "Launch fine-tune job"}
         </button>
       </form>
 
@@ -233,7 +273,7 @@ export function FineTuneCard() {
             <div className="flex items-center justify-between">
               <dt>Simulated</dt>
               <dd className="font-semibold text-amber-700">
-                {lastResult.simulated ? "Yes — add NEBIUS_API_KEY" : "No"}
+                {lastResult.simulated ? "Yes — add API key" : "No"}
               </dd>
             </div>
           )}
@@ -247,8 +287,7 @@ export function FineTuneCard() {
               Hardened checkpoint ready
             </p>
             <p className="text-xs text-zinc-500">
-              Switch inference to the new Nebius model and rerun audits to track
-              improvements automatically.
+              Switch inference to the new adapter and rerun audits to track improvements automatically.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
