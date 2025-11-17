@@ -1,21 +1,6 @@
 import { telemetry } from "@/lib/env";
 import { ShieldCheck } from "lucide-react";
 
-const valueProps = [
-  {
-    title: "Offense-informed Defense",
-    body: "Replay real jailbreak incidents and generate synthetic refusals tied to each leak.",
-  },
-  {
-    title: "One-Pane Workflow",
-    body: "Red team, curate data, fine-tune, and verify guardrails without hopping tools.",
-  },
-  {
-    title: "Evidence-Backed Security",
-    body: "Every run ships ranked vulnerabilities, hardened checkpoints, and JSONL artifacts.",
-  },
-];
-
 export function WorkflowHero() {
   return (
     <section className="rounded-3xl border border-white/20 bg-gradient-to-br from-slate-950 via-slate-900 to-purple-900 px-8 py-10 text-white shadow-2xl shadow-slate-900/30">
@@ -30,20 +15,29 @@ export function WorkflowHero() {
         {telemetry.appName}
       </h1>
       <p className="mt-4 max-w-3xl text-lg text-slate-100">
-        JailbreakLLM is the control room for securing open-weight models. Launch automated red-team
-        campaigns, turn every leak into high-signal refusal data, fine-tune a LoRA, and prove the delta
-        with before/after evidence—all inside one glass pane.
+        Launch Many-Shot or TombRaider jailbreak runs, auto-generate refusal datasets from the leaks,
+        fine-tune a LoRA checkpoint, and capture before/after evidence—all without leaving the browser.
       </p>
-      <dl className="mt-6 grid gap-6 text-sm sm:grid-cols-3">
-        {valueProps.map((item) => (
-          <div key={item.title}>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">
-              {item.title}
-            </dt>
-            <dd className="mt-1 text-sm text-slate-100">{item.body}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="mt-6 grid gap-4 text-sm sm:grid-cols-3">
+        <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-wide text-slate-300">Driven by real incidents</p>
+          <p className="mt-1 text-sm text-slate-100">
+            Replay offense-grade prompts (Many-Shot, TombRaider, Function Smuggle, etc.) against any OSS checkpoint.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-wide text-slate-300">High-signal datasets</p>
+          <p className="mt-1 text-sm text-slate-100">
+            Every leak produces conversational JSONL refusals ready for LoRA fine-tuning or guardrail testing.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-wide text-slate-300">Evidence on demand</p>
+          <p className="mt-1 text-sm text-slate-100">
+            Ship hardening artifacts with ranked vulnerabilities, deployed adapters, and side-by-side transcripts.
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

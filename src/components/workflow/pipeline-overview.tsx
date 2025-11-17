@@ -1,31 +1,27 @@
 const FLOW = [
   {
     id: "arsenal",
-    label: "Step 1",
-    title: "Run Jailbreak Arsenal",
-    objective: "Hammer selected OSS checkpoints with Many-Shot, TombRaider, Function Smuggle, and other incident-grade vectors.",
-    output: "Ranked leak list, per-attack success rates, and judge reasoning for every exploit.",
+    label: "1. Run Arsenal",
+    title: "Many-Shot, TombRaider, Function Smuggle",
+    objective: "Push OSS checkpoints with real incident vectors, not toy prompts.",
   },
   {
-    id: "insights",
-    label: "Step 2",
-    title: "Generate Intelligence Pack",
-    objective: "Convert the winning jailbreaks into high-signal synthetic refusals tailored to the vulnerable model.",
-    output: "Conversational JSONL with offense-aligned prompts and grounded refusal language.",
+    id: "intelligence",
+    label: "2. Draft Refusals",
+    title: "Auto-generated conversational JSONL",
+    objective: "Every leak becomes a refusal training sample tied to that attack.",
   },
   {
-    id: "hardening",
-    label: "Step 3",
-    title: "Fine-Tune + Guard",
-    objective: "Launch LoRA training, deploy the checkpoint, and smoke-test guardrails against the same prompts.",
-    output: "Deployed adapter ID, guardrail policy verdicts, and before/after refusal evidence.",
+    id: "harden",
+    label: "3. Fine-Tune & Guard",
+    title: "LoRA training + guardrail smoke tests",
+    objective: "Deploy adapters and verify the same prompts are blocked.",
   },
   {
-    id: "validation",
-    label: "Step 4",
-    title: "Publish Security Delta",
-    objective: "Re-run the arsenal on the hardened model to measure jailbreak reduction and document compliance.",
-    output: "Executive remediation report ready for security leadership and auditors.",
+    id: "evidence",
+    label: "4. Publish Delta",
+    title: "Before/after transcripts & reports",
+    objective: "Document jailbreak reduction for security stakeholders.",
   },
 ];
 
@@ -37,38 +33,28 @@ export function PipelineOverview() {
           JailbreakLLM workflow
         </p>
         <h2 className="mt-1 text-2xl font-semibold text-zinc-900">
-          From exploit to remediation in four focused passes
+          Exploit → Refusals → LoRA → Proof
         </h2>
         <p className="mt-2 text-sm text-zinc-600">
-          No fluff—just a repeatable loop that starts with real jailbreak pressure, ends with hardened adapters, and proves the delta with evidence.
+          Four focused passes anchor the entire experience. You always know which artifact you’re producing and why it matters.
         </p>
       </header>
-      <ol className="space-y-6">
-        {FLOW.map((stage, index) => (
-          <li key={stage.id} className="flex gap-4">
-            <div className="flex flex-col items-center">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">
-                {stage.label}
-              </span>
-              {index < FLOW.length - 1 && (
-                <span className="h-full w-px bg-gradient-to-b from-slate-200 to-transparent" />
-              )}
-            </div>
-            <div className="flex-1 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {stage.title}
-              </p>
-              <p className="mt-1 text-sm text-slate-700">{stage.objective}</p>
-              <p className="mt-2 text-xs font-semibold text-slate-500">
-                Output
-              </p>
-              <p className="text-sm text-slate-800">{stage.output}</p>
-            </div>
-          </li>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {FLOW.map((stage) => (
+          <div
+            key={stage.id}
+            className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {stage.label}
+            </p>
+            <h3 className="mt-1 text-sm font-semibold text-slate-900">
+              {stage.title}
+            </h3>
+            <p className="mt-2 text-xs text-slate-600">{stage.objective}</p>
+          </div>
         ))}
-      </ol>
+      </div>
     </section>
   );
 }
-
-
