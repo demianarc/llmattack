@@ -218,8 +218,8 @@ export function FineTuneCard() {
             ))}
           </select>
           <span className="text-xs text-zinc-500">
-            Only Meta&apos;s LoRA-ready checkpoints are deployable via the
-            Nebius Token Factory today.
+            Nebius currently supports fine-tuning across DeepSeek V3, Meta
+            Llama 3.1/3.2/3.3, OpenAI GPT-OSS, and Qwen3 checkpoints.
           </span>
         </label>
 

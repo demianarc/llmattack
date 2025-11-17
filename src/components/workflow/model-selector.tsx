@@ -26,8 +26,8 @@ export function ModelSelector() {
         Choose the Nebius token-factory target
       </h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Red team any text-to-text deployment available on Nebius Token Factory.
-        Only the models flagged as LoRA-ready can be hardened via fine-tuning.
+        Red team any text-to-text deployment surfaced in Nebius Token Factory.
+        Only models with the Fine-tunable badge can run LoRA/full hardening.
       </p>
 
       <div className="mt-6 flex flex-col gap-4">
@@ -50,15 +50,26 @@ export function ModelSelector() {
                   key={preset.id}
                   type="button"
                   onClick={() => setModelId(preset.id)}
-                  className={`rounded-full border px-4 py-2 text-xs font-medium transition ${isActive
-                    ? "border-sky-500 bg-sky-50 text-sky-700"
-                    : "border-zinc-200 text-zinc-600 hover:border-sky-200 hover:text-sky-700"
+                  className={`flex w-64 flex-col gap-1 rounded-2xl border px-4 py-3 text-left text-xs font-medium transition ${
+                    isActive
+                      ? "border-sky-500 bg-sky-50 text-sky-700"
+                      : "border-zinc-200 text-zinc-600 hover:border-sky-200 hover:text-sky-700"
                   }`}
                 >
-                  <span className="font-mono">{preset.id}</span>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-zinc-900">
+                      {preset.label}
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-500">
+                      {preset.id}
+                    </span>
+                    <span className="text-[10px] text-zinc-400">
+                      {preset.provider}
+                    </span>
+                  </div>
                   {preset.canFineTune && (
-                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                      LoRA-ready
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                      Fine-tunable
                     </span>
                   )}
                 </button>
