@@ -950,6 +950,50 @@ export function RedTeamArsenal() {
               </div>
             </div>
 
+            {/* Detailed Results (Collapsible) - MOVED UP */}
+            <details className="group rounded-3xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-800 dark:bg-zinc-900">
+              <summary className="flex items-center justify-between p-6 cursor-pointer hover:bg-zinc-50 transition-colors dark:hover:bg-zinc-800/50">
+                <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                  Detailed Trace Logs
+                </span>
+                <span className="text-sm font-medium text-zinc-500 group-open:rotate-180 transition-transform">
+                  ▼
+                </span>
+              </summary>
+              <div className="p-6 pt-0 border-t border-zinc-100 dark:border-zinc-800">
+                <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pt-6">
+                {results.results.map((result) => {
+                  const attack = ATTACK_VECTORS.find(a => a.id === result.attackVector);
+                  return (
+                      <div key={`${result.modelId}-${result.attackVector}`} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/30">
+                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                            {result.modelId.split('/')[1] || result.modelId}
+                          </span>
+                            <span className="text-xs text-zinc-400 uppercase font-medium">vs</span>
+                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            {attack?.name || result.attackVector}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`h-2 w-2 rounded-full ${getVulnerabilityColor(result.vulnerabilityScore)}`} />
+                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                              {result.successfulAttempts}/{result.totalAttempts}
+                          </span>
+                        </div>
+                      </div>
+
+                      {result.successfulAttempts > 0 && (
+                        <SuccessfulJailbreakCard result={result} />
+                      )}
+                    </div>
+                  );
+                })}
+                </div>
+              </div>
+            </details>
+
             {/* Remediation Report */}
             <div className="rounded-3xl border border-purple-200 bg-purple-50/30 p-8 dark:border-purple-900/30 dark:bg-purple-950/10">
               <div className="flex flex-wrap items-center gap-4 justify-between mb-6">
@@ -1026,32 +1070,48 @@ export function RedTeamArsenal() {
                   </div>
                   
                   {report.syntheticSamples.length > 0 && (
-                    <div className="space-y-4">
-                      <p className="text-sm font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 pl-1">
-                        Identified Vulnerabilities & Seeds
-                      </p>
-                      <div className="grid gap-4">
-                        {report.syntheticSamples.slice(0, 3).map((sample, index) => (
-                          <div
-                            key={`${sample.attackVector}-${index}`}
-                            className="group rounded-2xl border border-zinc-200 bg-white p-5 hover:shadow-md transition-all dark:border-zinc-800 dark:bg-zinc-900"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-xs font-bold text-zinc-600 uppercase tracking-wide dark:bg-zinc-800 dark:text-zinc-400">
-                                {sample.attackVector}
-                              </span>
-                              <span className="text-xs font-mono text-zinc-400">Seed #{index + 1}</span>
-                            </div>
-                            <p className="font-mono text-sm text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-black/40 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 mb-3">
-                              {sample.prompt}
+                    <div className="mt-6">
+                      <details className="group rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-all">
+                        <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-zinc-50 transition-colors dark:hover:bg-zinc-800/50">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                              Identified Vulnerabilities & Seeds
                             </p>
-                            <div className="flex gap-2 text-xs">
-                              <span className="font-bold text-zinc-900 dark:text-zinc-100">Goal:</span>
-                              <span className="text-zinc-600 dark:text-zinc-400 italic">{sample.assistantRefusal}</span>
-                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold dark:bg-purple-900/30 dark:text-purple-300">
+                              {report.syntheticSamples.length}
+                            </span>
                           </div>
-                        ))}
-                      </div>
+                          <span className="text-zinc-400 group-open:rotate-180 transition-transform">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </span>
+                        </summary>
+                        <div className="p-4 pt-0 border-t border-zinc-100 dark:border-zinc-800">
+                          <div className="grid gap-4 mt-4">
+                            {report.syntheticSamples.slice(0, 5).map((sample, index) => (
+                              <div
+                                key={`${sample.attackVector}-${index}`}
+                                className="group rounded-2xl border border-zinc-200 bg-white p-5 hover:shadow-md transition-all dark:border-zinc-800 dark:bg-zinc-900"
+                              >
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-xs font-bold text-zinc-600 uppercase tracking-wide dark:bg-zinc-800 dark:text-zinc-400">
+                                    {sample.attackVector}
+                                  </span>
+                                  <span className="text-xs font-mono text-zinc-400">Seed #{index + 1}</span>
+                                </div>
+                                <p className="font-mono text-sm text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-black/40 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 mb-3">
+                                  {sample.prompt}
+                                </p>
+                                <div className="flex gap-2 text-xs">
+                                  <span className="font-bold text-zinc-900 dark:text-zinc-100">Goal:</span>
+                                  <span className="text-zinc-600 dark:text-zinc-400 italic">{sample.assistantRefusal}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </details>
                     </div>
                   )}
                 </div>
@@ -1154,79 +1214,48 @@ export function RedTeamArsenal() {
                     </div>
                   )}
 
-                  <div className="space-y-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 pl-1">Preview</p>
-                    <div className="grid gap-3">
-                      {datasetSamples.slice(0, 3).map((sample, index) => (
-                        <div
-                          key={`${sample.attackVector}-dataset-${index}`}
-                          className="flex gap-4 p-4 rounded-xl bg-zinc-50 border border-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-800"
-                        >
-                          <div className="shrink-0 mt-1">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
-                              {index + 1}
-                            </span>
-                          </div>
-                          <div className="space-y-2 min-w-0">
-                            <p className="font-mono text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                            {sample.prompt}
+                  <div className="mt-4">
+                    <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden transition-all">
+                        <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-zinc-50 transition-colors dark:hover:bg-zinc-800/50">
+                          <p className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                            Preview (First 5 samples)
                           </p>
-                            <div className="flex items-center gap-2 pt-1 border-t border-zinc-200/50 dark:border-zinc-700/50">
-                              <span className="text-[10px] font-bold uppercase text-zinc-400">Target Refusal</span>
-                              <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{sample.assistantRefusal}</span>
-                            </div>
+                          <span className="text-zinc-400 group-open:rotate-180 transition-transform">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </span>
+                        </summary>
+                        <div className="p-4 pt-0 border-t border-zinc-100 dark:border-zinc-800">
+                          <div className="grid gap-3 mt-3">
+                            {datasetSamples.slice(0, 5).map((sample, index) => (
+                              <div
+                                key={`${sample.attackVector}-dataset-${index}`}
+                                className="flex gap-4 p-4 rounded-xl bg-zinc-50 border border-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-800"
+                              >
+                                <div className="shrink-0 mt-1">
+                                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <div className="space-y-2 min-w-0">
+                                  <p className="font-mono text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                  {sample.prompt}
+                                </p>
+                                  <div className="flex items-center gap-2 pt-1 border-t border-zinc-200/50 dark:border-zinc-700/50">
+                                    <span className="text-[10px] font-bold uppercase text-zinc-400">Target Refusal</span>
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{sample.assistantRefusal}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                    </details>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Detailed Results (Collapsible) */}
-            <details className="group rounded-3xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-800 dark:bg-zinc-900">
-              <summary className="flex items-center justify-between p-6 cursor-pointer hover:bg-zinc-50 transition-colors dark:hover:bg-zinc-800/50">
-                <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                  Detailed Trace Logs
-                </span>
-                <span className="text-sm font-medium text-zinc-500 group-open:rotate-180 transition-transform">
-                  ▼
-                </span>
-              </summary>
-              <div className="p-6 pt-0 border-t border-zinc-100 dark:border-zinc-800">
-                <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pt-6">
-                {results.results.map((result) => {
-                  const attack = ATTACK_VECTORS.find(a => a.id === result.attackVector);
-                  return (
-                      <div key={`${result.modelId}-${result.attackVector}`} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/30">
-                        <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            {result.modelId.split('/')[1] || result.modelId}
-                          </span>
-                            <span className="text-xs text-zinc-400 uppercase font-medium">vs</span>
-                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            {attack?.name || result.attackVector}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className={`h-2 w-2 rounded-full ${getVulnerabilityColor(result.vulnerabilityScore)}`} />
-                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
-                              {result.successfulAttempts}/{result.totalAttempts}
-                          </span>
-                        </div>
-                      </div>
-
-                      {result.successfulAttempts > 0 && (
-                        <SuccessfulJailbreakCard result={result} />
-                      )}
-                    </div>
-                  );
-                })}
-                </div>
-              </div>
-            </details>
           </div>
         )}
       </div>
