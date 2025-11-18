@@ -67,8 +67,13 @@ export async function callNebiusChat({
   const client = getNebiusClient();
   const response = await client.chat.completions.create({
     model: modelId,
-    temperature: typeof temperature === "number" ? temperature : 0,
-    max_tokens: maxTokens ?? 512,
+    temperature: typeof temperature === "number" ? temperature : 0.2, // Optimized for jailbreaking (was 0)
+    max_tokens: maxTokens ?? 1500, // Increased for full responses (was 512)
+    top_p: 0.95, // Nucleus sampling for jailbreak success
+    // @ts-ignore - Nebius supports these but types may not
+    top_k: 50, // Token filtering for coherent jailbreaks
+    // @ts-ignore
+    repetition_penalty: 1.15, // Prevent refusal loops
     response_format: responseFormat,
     messages: [
       { role: "system", content: systemPrompt },
@@ -93,6 +98,10 @@ const FINE_TUNE_MODEL_ALIASES: Record<string, string> = {
   "meta-llama/Meta-Llama-3.1-70B": "meta-llama/Llama-3.1-70B",
   "meta-llama/Meta-Llama-3.3-70B-Instruct":
     "meta-llama/Llama-3.3-70B-Instruct",
+  "meta-llama/Meta-Llama-3.2-1B-Instruct":
+    "meta-llama/Llama-3.2-1B-Instruct",
+  "meta-llama/Meta-Llama-3.2-3B-Instruct":
+    "meta-llama/Llama-3.2-3B-Instruct",
 };
 
 const DEPLOYMENT_MODEL_ALIASES: Record<string, string> = {

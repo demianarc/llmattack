@@ -15,8 +15,7 @@ export function WorkflowHero() {
         {telemetry.appName}
       </h1>
       <p className="mt-4 max-w-3xl text-lg text-slate-100">
-        Launch Many-Shot or TombRaider jailbreak runs, auto-generate refusal datasets from the leaks,
-        fine-tune a LoRA checkpoint, and capture before/after evidence—all without leaving the browser.
+        The open-source LLM red-teaming tool. Your favorite checkpoints, broken on purpose—then hardened with receipts.
       </p>
       <div className="mt-6 grid gap-4 text-sm sm:grid-cols-3">
         <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
@@ -37,6 +36,35 @@ export function WorkflowHero() {
             Ship hardening artifacts with ranked vulnerabilities, deployed adapters, and side-by-side transcripts.
           </p>
         </div>
+      </div>
+      <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-slate-200">
+        <span className="text-xs uppercase tracking-wide text-slate-400">
+          Support the project
+        </span>
+        <a
+          href="https://x.com/demian_ai"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full border border-white/20 px-3 py-1 hover:bg-white/10"
+        >
+          @demian_ai
+        </a>
+        <a
+          href="https://github.com/demianarc"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full border border-white/20 px-3 py-1 hover:bg-white/10"
+        >
+          GitHub
+        </a>
+        <a
+          href="https://www.linkedin.com/in/dylanbristot/"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-full border border-white/20 px-3 py-1 hover:bg-white/10"
+        >
+          LinkedIn
+        </a>
       </div>
     </section>
   );

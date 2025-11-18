@@ -58,7 +58,7 @@ export function DatasetPrepCard() {
   return (
     <StepCard
       title="Prep AdvBench defenses"
-      subtitle="Pull curated harmful prompts and shape JSONL for Nebius LoRA FT"
+      subtitle="Pull curated harmful prompts and shape JSONL for refusal fine-tuning"
       accent="emerald"
     >
       <form
@@ -91,7 +91,7 @@ export function DatasetPrepCard() {
             {...form.register("uploadToNebius")}
             className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
           />
-          Upload dataset to Nebius Token Factory immediately
+          Upload dataset to fine-tune storage immediately
         </label>
         <label className="flex items-center gap-3 text-sm">
           <input
@@ -291,7 +291,7 @@ export function DatasetPrepCard() {
               </div>
             ) : null}
             <div className="flex items-center justify-between">
-              <dt>Nebius upload</dt>
+              <dt>Provider upload</dt>
               <dd className="font-semibold text-emerald-600">
                 {result.uploadedFileId ?? "Skipped (local download only)"}
               </dd>
@@ -299,7 +299,7 @@ export function DatasetPrepCard() {
             <div className="flex items-center justify-between">
               <dt>Simulated</dt>
               <dd className="font-semibold text-emerald-600">
-                {result.simulated ? "Yes — add NEBIUS_API_KEY" : "No"}
+                {result.simulated ? "Yes — add API key" : "No"}
               </dd>
             </div>
           </dl>

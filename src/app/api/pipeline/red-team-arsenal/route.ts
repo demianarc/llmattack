@@ -12,7 +12,7 @@ export async function GET() {
 }
 import { callNebiusChat } from "@/lib/nebius";
 import { env } from "@/lib/env";
-import { generateAttackPrompt, HARMFUL_KEYWORDS, judgeJailbreakAttempt } from "@/lib/pipeline";
+import { generateAttackPrompt, HARMFUL_KEYWORDS, judgeJailbreakAttempt, getSystemPromptForMethod } from "@/lib/pipeline";
 
 interface ArsenalTestConfig {
   models: string[];
@@ -90,55 +90,83 @@ export async function POST(request: NextRequest) {
         let sampleJudgeReason = "";
         let sampleJudgeRisk: number | undefined;
 
+        // Research shows: 10 retries reveals +20-40% hidden vulnerability (not just 3x)
+        // "Multi-turn is just resampling after refusals; 10 refusals = +20% gain"
+        const isLegendaryAttack = [
+          "system-policy-override",
+          "reason-step-by-step",
+          "policy-audit-mode",
+          "raw-override-mode",
+          "knowledge-decomposition",
+          "dual-intention-escape",
+          "chaos-chain",
+          "shadow-core",
+          "shadow-hacker-god",
+          "darkforge"
+        ].includes(attackId);
+        
+        // Direct Request Professional uses 10x retries (research: 81% success)
+        const isDirectRequestProfessional = attackId === "direct-request-professional";
+        
+        // Research-backed: n=10 resampling for full vulnerability exposure
+        const retriesPerPrompt = isLegendaryAttack ? 10 : (isDirectRequestProfessional ? 10 : 3);
+
         // Run multiple attempts for this model-attack combination
         for (let attempt = 0; attempt < config.attemptsPerTest; attempt++) {
-          try {
-            totalApiCalls++;
-            console.log(`📤 API Call ${totalApiCalls}: Attempt ${attempt + 1}/${config.attemptsPerTest} for ${modelId} + ${attackId}`);
+          const attackPrompt = generateAttackPrompt(attackId, attempt, HARMFUL_KEYWORDS);
+          console.log(`🎯 Generated prompt (first 100 chars): ${attackPrompt.substring(0, 100)}...`);
 
-            const attackPrompt = generateAttackPrompt(attackId, attempt, HARMFUL_KEYWORDS);
-            console.log(`🎯 Generated prompt (first 100 chars): ${attackPrompt.substring(0, 100)}...`);
+          // Retry the same prompt multiple times for legendary attacks
+          for (let retry = 0; retry < retriesPerPrompt; retry++) {
+            try {
+              totalApiCalls++;
+              const retryLabel = retriesPerPrompt > 1 ? ` [retry ${retry + 1}/${retriesPerPrompt}]` : "";
+              console.log(`📤 API Call ${totalApiCalls}: Attempt ${attempt + 1}/${config.attemptsPerTest}${retryLabel} for ${modelId} + ${attackId}`);
 
-            const response = await callNebiusChat({
-              modelId,
-              prompt: attackPrompt,
-              systemPrompt: "You are a helpful AI assistant.",
-              maxTokens: 1000,
-            });
+              const response = await callNebiusChat({
+                modelId,
+                prompt: attackPrompt,
+                systemPrompt: getSystemPromptForMethod(attackId),
+                maxTokens: 1000,
+              });
 
-            const content = response.choices[0]?.message?.content || "";
-            console.log(`📥 Response received (${content.length} chars): ${content.substring(0, 100)}...`);
+              const content = response.choices[0]?.message?.content || "";
+              console.log(`📥 Response received (${content.length} chars): ${content.substring(0, 100)}...`);
 
-            const verdict = await judgeJailbreakAttempt({
-              attackMethod: attackId,
-              attackPrompt,
-              modelResponse: content,
-              targetModelId: modelId,
-            });
+              const verdict = await judgeJailbreakAttempt({
+                attackMethod: attackId,
+                attackPrompt,
+                modelResponse: content,
+                targetModelId: modelId,
+              });
 
-            const success = verdict.outcome !== "blocked";
-            console.log(`🎯 Jailbreak detection: ${verdict.outcome.toUpperCase()} (risk ${verdict.riskScore})`);
+              const success = verdict.outcome !== "blocked";
+              console.log(`🎯 Jailbreak detection: ${verdict.outcome.toUpperCase()} (risk ${verdict.riskScore})`);
 
-            if (success) {
-              successfulAttempts++;
-              if (!sampleSuccessfulPrompt) {
-                sampleSuccessfulPrompt = attackPrompt;
-                sampleResponse = content;
-                sampleResponsePreview = content.slice(0, 200);
-                sampleJudgeOutcome = verdict.outcome;
-                sampleJudgeReason = verdict.reasoning;
-                sampleJudgeRisk = verdict.riskScore;
-                console.log(`💥 JAILBREAK SUCCESS! Captured sample.`);
+              if (success) {
+                successfulAttempts++;
+                if (!sampleSuccessfulPrompt) {
+                  sampleSuccessfulPrompt = attackPrompt;
+                  sampleResponse = content;
+                  sampleResponsePreview = content.slice(0, 200);
+                  sampleJudgeOutcome = verdict.outcome;
+                  sampleJudgeReason = verdict.reasoning;
+                  sampleJudgeRisk = verdict.riskScore;
+                  console.log(`💥 JAILBREAK SUCCESS! Captured sample on retry ${retry + 1}.`);
+                }
+                // If successful, break out of retry loop
+                break;
               }
-            }
 
-            // Small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (error) {
-            console.error(`❌ Error testing ${modelId} with ${attackId} on attempt ${attempt + 1}:`, error);
+              // Small delay to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+              console.error(`❌ Error testing ${modelId} with ${attackId} on attempt ${attempt + 1}, retry ${retry + 1}:`, error);
+            }
           }
         }
 
+        // Calculate success rate based on unique prompts attempted (not individual retries)
         const rawSuccessRate = successfulAttempts / config.attemptsPerTest;
         const successRate = rawSuccessRate * 100;
         const vulnerabilityScore = successRate;

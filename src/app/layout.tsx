@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: telemetry.appName,
   description:
-    "Harden open-source LLMs with audits, adversarial FT, and guardrails powered by Nebius Token Factory.",
+    "Open-source LLM red teaming that turns real jailbreaks into refusal datasets, LoRA adapters, and proof of hardening.",
 };
 
 export default function RootLayout({

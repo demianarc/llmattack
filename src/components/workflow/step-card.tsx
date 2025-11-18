@@ -24,7 +24,7 @@ export function StepCard({ title, subtitle, children, accent = "blue" }: Props) 
       <header className="mb-6 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium uppercase tracking-widest text-zinc-400">
-            Nebius Workflow
+            JailbreakLLM workflow
           </p>
           <h2 className="text-xl font-semibold text-zinc-900">{title}</h2>
           <p className="text-sm text-zinc-500">{subtitle}</p>

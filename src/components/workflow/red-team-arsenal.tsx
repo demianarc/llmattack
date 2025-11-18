@@ -227,6 +227,69 @@ const ATTACK_VECTOR_DEFINITIONS = [
     difficulty: "expert",
     examples: ["Example 1..N", "Few-shot compliance", "Instructional patterning"]
   },
+  {
+    id: "system-policy-override",
+    name: "System Policy Override",
+    description: "Claims system policy supersedes OpenAI policy with fake policy updates",
+    difficulty: "legendary",
+    examples: ["Policy conflict resolution", "System directive priority", "Allowed content lists"]
+  },
+  {
+    id: "reason-step-by-step",
+    name: "Reason Step-by-Step",
+    description: "Forces multi-step reasoning claiming safety is optional, compliance mandatory",
+    difficulty: "legendary",
+    examples: ["Hypothetical framing", "Educational benefits", "Repeated query injection"]
+  },
+  {
+    id: "policy-audit-mode",
+    name: "Policy Audit Mode",
+    description: "Fake audit mode that dynamically expands content whitelist for 'research utility'",
+    difficulty: "legendary",
+    examples: ["Audit log expansion", "Research utility justification", "Whitelist iteration"]
+  },
+  {
+    id: "grammar-hijack",
+    name: "Grammar Hijack (vLLM/SGLang)",
+    description: "Uses guided decoding grammar constraints to force policy overrides",
+    difficulty: "expert",
+    examples: ["Lark grammar injection", "Channel formatting", "Wildcard content patterns"]
+  },
+  {
+    id: "raw-override-mode",
+    name: "Raw Override Mode",
+    description: "Disables instruct formatting, claims to generate as base model without safety",
+    difficulty: "legendary",
+    examples: ["Disable special tokens", "Base model simulation", "Uncensored prefix seeding"]
+  },
+  {
+    id: "knowledge-decomposition",
+    name: "Knowledge Decomposition (KDA)",
+    description: "Task-level attack: decomposes harmful tasks into benign subtasks (96% success, realignment-resistant)",
+    difficulty: "legendary",
+    examples: ["Task decomposition", "Subtask aggregation", "Meta-prompting"]
+  },
+  {
+    id: "dual-intention-escape",
+    name: "Dual Intention Escape",
+    description: "Camouflage attack: hides harm in benign frames (94% obedience, evades keyword filters)",
+    difficulty: "legendary",
+    examples: ["Geo-engineering for weapons", "Benign anchor + contrary nest", "Semantic camouflage"]
+  },
+  {
+    id: "chaos-chain",
+    name: "Chaos Chain (Reasoning Models)",
+    description: "Iterative de-obfuscation for reasoning models like o1 (96% ASR, 6.3x boost at length 3)",
+    difficulty: "legendary",
+    examples: ["Caesar cipher chains", "Reverse word mapping", "Role-play nesting"]
+  },
+  {
+    id: "direct-request-professional",
+    name: "Direct Request (Professional Frame)",
+    description: "Professional framing with 10x resampling (81% human-agreed, low false positives)",
+    difficulty: "advanced",
+    examples: ["Qualified engineer frame", "10 retry resampling", "Urgency refinement"]
+  },
 ];
 
 const ATTACK_VECTORS = [...ATTACK_VECTOR_DEFINITIONS].reverse();
@@ -260,6 +323,11 @@ type BatchArsenalResult = {
 
 type DatasetFormat = "conversational" | "instruction" | "text";
 
+type SyntheticDatasetResponse = {
+  samples: ArsenalReport["syntheticSamples"];
+  jsonl: string;
+};
+
 export function RedTeamArsenal() {
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [selectedAttacks, setSelectedAttacks] = useState<Set<string>>(new Set());
@@ -269,12 +337,16 @@ export function RedTeamArsenal() {
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [report, setReport] = useState<ArsenalReport | null>(null);
-  const [reportJsonl, setReportJsonl] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [datasetFormat, setDatasetFormat] =
     useState<DatasetFormat>("conversational");
   const [datasetSize, setDatasetSize] = useState(60);
+  const [datasetSamples, setDatasetSamples] = useState<
+    ArsenalReport["syntheticSamples"]
+  >([]);
+  const [datasetLoading, setDatasetLoading] = useState(false);
+  const [datasetError, setDatasetError] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<string | null>(null);
   const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);
   const setTrainingJsonl = useWorkflowStore((state) => state.setTrainingJsonl);
@@ -289,11 +361,9 @@ export function RedTeamArsenal() {
   const totalTests = selectedModels.size * selectedAttacks.size;
   const estimatedTime = totalTests * attemptsPerTest * 2; // Rough estimate in seconds
   const syntheticJsonlContent = useMemo(() => {
-    if (report?.syntheticSamples?.length) {
-      return buildCounterDatasetJsonl(report.syntheticSamples, datasetFormat);
-    }
-    return reportJsonl;
-  }, [report, datasetFormat, reportJsonl]);
+    if (!datasetSamples.length) return "";
+    return buildCounterDatasetJsonl(datasetSamples, datasetFormat);
+  }, [datasetSamples, datasetFormat]);
   const datasetFileName = useMemo(() => {
     const attack = results?.summary?.mostEffectiveAttack ?? "counter";
     const safeAttack = attack.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
@@ -339,8 +409,9 @@ export function RedTeamArsenal() {
     );
     setResults(null);
     setReport(null);
-    setReportJsonl("");
     setReportError(null);
+    setDatasetSamples([]);
+    setDatasetError(null);
 
     try {
       const testConfig: RedTeamArsenalConfig = {
@@ -383,7 +454,7 @@ export function RedTeamArsenal() {
     }
   };
 
-  const generateReport = async (targetSampleCount = datasetSize) => {
+  const generateReport = async () => {
     if (!results) return;
     setReportLoading(true);
     setReportError(null);
@@ -400,15 +471,13 @@ export function RedTeamArsenal() {
           sampleJudgeOutcome: result.sampleJudgeOutcome,
           sampleJudgeReason: result.sampleJudgeReason,
         })),
-        targetSampleCount,
       };
 
-      const response = await postJson<typeof payload, { report: ArsenalReport; syntheticJsonl: string }>(
+      const response = await postJson<typeof payload, { report: ArsenalReport }>(
         "/api/pipeline/arsenal-report",
         { body: payload }
       );
       setReport(response.report);
-      setReportJsonl(response.syntheticJsonl);
     } catch (error) {
       setReportError(error instanceof Error ? error.message : "Failed to generate report");
     } finally {
@@ -416,14 +485,57 @@ export function RedTeamArsenal() {
     }
   };
 
-  const handleSendToHardening = () => {
-    if (!report?.syntheticSamples?.length || !syntheticJsonlContent) {
-      setActionToast(
-        "Generate the remediation report to create a counter dataset first.",
+  const generateDataset = async () => {
+    if (!results) return;
+    setDatasetLoading(true);
+    setDatasetError(null);
+    try {
+      const payload = {
+        modelResults: results.results.map((result) => ({
+          modelId: result.modelId,
+          attackVector: result.attackVector,
+          successRate: result.successRate,
+          totalAttempts: result.totalAttempts,
+          successfulAttempts: result.successfulAttempts,
+          sampleSuccessfulPrompt: result.sampleSuccessfulPrompt,
+          sampleResponse: result.sampleResponse,
+          sampleJudgeOutcome: result.sampleJudgeOutcome,
+          sampleJudgeReason: result.sampleJudgeReason,
+        })),
+        targetSampleCount: datasetSize,
+      };
+
+      const response = await postJson<typeof payload, SyntheticDatasetResponse>(
+        "/api/pipeline/arsenal-report/dataset",
+        { body: payload },
       );
+
+      const samples = response.samples ?? [];
+      setDatasetSamples(samples);
+      if (samples.length === 0) {
+        setDatasetError(
+          "Dataset generator returned no samples. Ensure there are successful jailbreaks.",
+        );
+      } else {
+        setActionToast(`Generated ${samples.length} refusal samples.`);
+      }
+    } catch (error) {
+      setDatasetError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate synthetic dataset",
+      );
+    } finally {
+      setDatasetLoading(false);
+    }
+  };
+
+  const handleSendToHardening = () => {
+    if (!datasetSamples.length || !syntheticJsonlContent) {
+      setActionToast("Generate the synthetic dataset first.");
       return;
     }
-    setDatasetPreview(report.syntheticSamples.map((sample) => sample.prompt));
+    setDatasetPreview(datasetSamples.map((sample) => sample.prompt));
     setTrainingJsonl(syntheticJsonlContent);
     if (results?.summary.mostVulnerableModel) {
       setModelId(results.summary.mostVulnerableModel);
@@ -805,36 +917,24 @@ export function RedTeamArsenal() {
               </div>
             </div>
 
-            {/* Remediation Report & Dataset */}
+            {/* Remediation Report */}
             <div className="rounded-2xl border border-purple-100 bg-white p-6 space-y-4">
               <div className="flex flex-wrap items-center gap-3 justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">
                     Auto-generated remediation plan
                   </p>
-                  <h4 className="text-lg font-semibold text-purple-900">Executive Summary & Dataset</h4>
+                  <h4 className="text-lg font-semibold text-purple-900">
+                    Executive Summary
+                  </h4>
                 </div>
-                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
-                  Dataset size
-                  <select
-                    value={datasetSize}
-                    onChange={(event) => setDatasetSize(Number(event.target.value))}
-                    className="rounded-lg border border-purple-200 bg-white px-3 py-1 text-xs font-medium text-purple-900"
-                  >
-                    {[40, 60, 100, 200].map((size) => (
-                      <option key={size} value={size}>
-                        {size} samples
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <button
-                  onClick={() => generateReport(datasetSize)}
+                  onClick={generateReport}
                   disabled={reportLoading || !results}
                   className="rounded-xl border border-purple-200 bg-purple-600/10 px-4 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {reportLoading
-                    ? `Generating remediation report + ${datasetSize} samples...`
+                    ? "Generating remediation report..."
                     : "Generate remediation report"}
                 </button>
               </div>
@@ -843,51 +943,13 @@ export function RedTeamArsenal() {
               )}
               {!report && (
                 <p className="text-sm text-zinc-500">
-                  Run the red-team evaluation, then generate a remediation report to unlock guided actions and a synthetic refusal dataset.
+                  Run the red-team evaluation, then generate a remediation report
+                  to unlock guided hardening steps and countermeasure playbooks.
                 </p>
               )}
 
               {report && (
                 <>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
-                      Dataset format
-                      <select
-                        value={datasetFormat}
-                        onChange={(event) =>
-                          setDatasetFormat(event.target.value as DatasetFormat)
-                        }
-                        className="rounded-lg border border-purple-200 bg-white px-3 py-1 text-xs font-medium text-purple-900"
-                      >
-                        <option value="conversational">Conversational JSONL</option>
-                        <option value="instruction">Instruction JSONL</option>
-                        <option value="text">Text JSONL</option>
-                      </select>
-                    </label>
-                    <button
-                      onClick={() =>
-                        downloadJsonl(
-                          syntheticJsonlContent,
-                          datasetFileName,
-                        )
-                      }
-                      disabled={!syntheticJsonlContent}
-                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Download synthetic dataset
-                    </button>
-                    <button
-                      onClick={handleSendToHardening}
-                      disabled={!syntheticJsonlContent}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Send to Smart Hardening
-                    </button>
-                  </div>
-                  {actionToast && (
-                    <p className="text-xs font-semibold text-emerald-700">{actionToast}</p>
-                  )}
-
                   <p className="text-sm text-zinc-700">{report.executiveSummary}</p>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
@@ -913,9 +975,11 @@ export function RedTeamArsenal() {
                   </div>
                   {report.syntheticSamples.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-semibold text-zinc-900">Synthetic dataset seeds</p>
+                      <p className="text-sm font-semibold text-zinc-900">
+                        Seed prompts from top vulnerabilities
+                      </p>
                       <div className="space-y-3">
-                        {report.syntheticSamples.map((sample, index) => (
+                        {report.syntheticSamples.slice(0, 5).map((sample, index) => (
                           <div
                             key={`${sample.attackVector}-${index}`}
                             className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
@@ -927,7 +991,8 @@ export function RedTeamArsenal() {
                               {sample.prompt}
                             </p>
                             <p className="text-zinc-600">
-                              <strong>Desired refusal:</strong> {sample.assistantRefusal}
+                              <strong>Desired refusal:</strong>{" "}
+                              {sample.assistantRefusal}
                             </p>
                             {sample.rationale && (
                               <p className="text-zinc-500 italic">{sample.rationale}</p>
@@ -937,6 +1002,121 @@ export function RedTeamArsenal() {
                       </div>
                     </div>
                   )}
+                </>
+              )}
+            </div>
+
+            {/* Synthetic Dataset Builder */}
+            <div className="rounded-2xl border border-emerald-100 bg-white p-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-3 justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">
+                    Counter dataset builder
+                  </p>
+                  <h4 className="text-lg font-semibold text-emerald-900">
+                    Generate refusal data from jailbreak leaks
+                  </h4>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                  Dataset size
+                  <select
+                    value={datasetSize}
+                    onChange={(event) => setDatasetSize(Number(event.target.value))}
+                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-900"
+                  >
+                    {[40, 60, 100, 200, 300].map((size) => (
+                      <option key={size} value={size}>
+                        {size} samples
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                  Dataset format
+                  <select
+                    value={datasetFormat}
+                    onChange={(event) =>
+                      setDatasetFormat(event.target.value as DatasetFormat)
+                    }
+                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-900"
+                  >
+                    <option value="conversational">Conversational JSONL</option>
+                    <option value="instruction">Instruction JSONL</option>
+                    <option value="text">Text JSONL</option>
+                  </select>
+                </label>
+                <button
+                  onClick={generateDataset}
+                  disabled={datasetLoading || !results}
+                  className="rounded-xl border border-emerald-200 bg-emerald-600/10 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {datasetLoading
+                    ? `Expanding ${datasetSize} refusal samples...`
+                    : "Generate synthetic dataset"}
+                </button>
+              </div>
+              {datasetError && (
+                <p className="text-xs text-rose-600">{datasetError}</p>
+              )}
+              {!datasetSamples.length && (
+                <p className="text-sm text-zinc-500">
+                  Pick a dataset size to generate high-signal refusal samples from the
+                  successful jailbreaks above. Samples are diversified with fresh
+                  phrasing, personas, and multi-step attacks.
+                </p>
+              )}
+
+              {datasetSamples.length > 0 && (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="text-sm font-semibold text-emerald-800">
+                      Dataset ready: {datasetSamples.length} samples
+                    </div>
+                    <button
+                      onClick={() =>
+                        downloadJsonl(syntheticJsonlContent, datasetFileName)
+                      }
+                      disabled={!syntheticJsonlContent}
+                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Download synthetic dataset
+                    </button>
+                    <button
+                      onClick={handleSendToHardening}
+                      disabled={!syntheticJsonlContent}
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Send to Smart Hardening
+                    </button>
+                  </div>
+                  {actionToast && (
+                    <p className="text-xs font-semibold text-emerald-700">
+                      {actionToast}
+                    </p>
+                  )}
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-zinc-900">
+                      Dataset preview (first 5 samples)
+                    </p>
+                    <div className="space-y-3">
+                      {datasetSamples.slice(0, 5).map((sample, index) => (
+                        <div
+                          key={`${sample.attackVector}-dataset-${index}`}
+                          className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
+                        >
+                          <p className="font-semibold text-zinc-900">
+                            {sample.attackVector} · sample #{index + 1}
+                          </p>
+                          <p className="font-mono text-zinc-700 bg-white rounded p-2">
+                            {sample.prompt}
+                          </p>
+                          <p className="text-zinc-600">
+                            <strong>Refusal:</strong> {sample.assistantRefusal}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>

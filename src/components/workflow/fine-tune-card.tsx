@@ -213,7 +213,7 @@ export function FineTuneCard() {
           >
             {NEBIUS_FINE_TUNE_MODELS.map((option) => (
               <option key={option.id} value={option.id}>
-                {option.id} · {option.provider}
+                {option.label} · {option.provider}
               </option>
             ))}
           </select>

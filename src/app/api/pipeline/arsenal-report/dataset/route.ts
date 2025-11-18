@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleError, success } from "@/lib/http";
 import {
-  generateRemediationReport,
+  generateSyntheticDataset,
   type RemediationReportInput,
 } from "@/lib/arsenal";
 
@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const report = await generateRemediationReport(body);
-    return success({ report });
+    const dataset = await generateSyntheticDataset(body);
+    return success(dataset);
   } catch (error) {
-    console.error("Arsenal report error:", error);
+    console.error("Arsenal dataset error:", error);
     return handleError(error);
   }
 }

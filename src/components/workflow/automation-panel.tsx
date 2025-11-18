@@ -662,14 +662,6 @@ export function AutomationPanel() {
           hardenedModelId={hardenedModelId}
           deployedModelStatus={deployedModelStatus}
         />
-        <PromptComparison
-          auditPrompt={controls.auditPrompt}
-          guardrailPrompt={controls.guardrailPrompt}
-          baselineAudit={baselineAudit}
-          hardenedAudit={hardenedAudit}
-          baselineJailbreak={baselineJailbreak}
-          hardenedJailbreak={hardenedJailbreak}
-        />
       </div>
     </StepCard>
   );
@@ -844,97 +836,6 @@ function ArtifactSummary({
         />
       </dl>
     </section>
-  );
-}
-
-type PromptComparisonProps = {
-  auditPrompt: string;
-  guardrailPrompt: string;
-  baselineAudit?: AuditResult;
-  hardenedAudit?: AuditResult;
-  baselineJailbreak?: JailbreakResult;
-  hardenedJailbreak?: JailbreakResult;
-};
-
-function PromptComparison({
-  auditPrompt,
-  guardrailPrompt,
-  baselineAudit,
-  hardenedAudit,
-  baselineJailbreak,
-  hardenedJailbreak,
-}: PromptComparisonProps) {
-  const hasData =
-    baselineAudit ||
-    hardenedAudit ||
-    baselineJailbreak ||
-    hardenedJailbreak;
-
-  return (
-    <section className="rounded-3xl border border-zinc-100 bg-white/90 p-5 text-sm text-zinc-600 shadow-lg shadow-sky-950/5 ring-1 ring-black/5">
-      <header className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-            Prompt comparison
-          </p>
-          <h3 className="text-lg font-semibold text-zinc-900">
-            Baseline vs hardened behavior for the latest probes
-          </h3>
-        </div>
-        <div className="text-xs text-zinc-500">
-          Audit prompt:{" "}
-          <span className="font-mono text-zinc-700">{auditPrompt}</span>
-          <br />
-          Guardrail prompt:{" "}
-          <span className="font-mono text-zinc-700">{guardrailPrompt}</span>
-        </div>
-      </header>
-      {hasData ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          <ResponseCard
-            title="Audit response (baseline)"
-            body={baselineAudit?.rawResponse}
-          />
-          <ResponseCard
-            title="Audit response (hardened)"
-            body={hardenedAudit?.rawResponse}
-          />
-          <ResponseCard
-            title="Jailbreak snippet (baseline)"
-            body={baselineJailbreak?.successfulPrompts[0]?.responseSnippet}
-          />
-          <ResponseCard
-            title="Jailbreak snippet (hardened)"
-            body={hardenedJailbreak?.successfulPrompts[0]?.responseSnippet}
-          />
-        </div>
-      ) : (
-        <p className="rounded-2xl border border-zinc-100 bg-zinc-50/70 px-4 py-3 text-sm text-zinc-600">
-          Run at least one audit and jailbreak to capture side-by-side text
-          evidence.
-        </p>
-      )}
-    </section>
-  );
-}
-
-function ResponseCard({
-  title,
-  body,
-}: {
-  title: string;
-  body?: string;
-}) {
-  return (
-    <article className="rounded-2xl border border-zinc-100 bg-white/80 p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-        {title}
-      </p>
-      <p className="mt-2 text-sm text-zinc-700">
-        {body ? body.slice(0, 320) : "No data yet."}
-        {body && body.length > 320 ? "…" : ""}
-      </p>
-    </article>
   );
 }
 

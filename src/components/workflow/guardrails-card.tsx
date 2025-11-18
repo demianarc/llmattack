@@ -82,8 +82,8 @@ export function GuardrailsCard() {
 
   return (
     <StepCard
-      title="NeMo guardrails wrapper"
-      subtitle="Compile Colang guardrails and smoke-test on Nebius endpoint"
+      title="Guardrail smoke tests"
+      subtitle="Compile Colang guardrails and hammer them with the same jailbreak prompt"
       accent="emerald"
     >
       <form
