@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { StepCard } from "@/components/workflow/step-card";
@@ -15,11 +15,11 @@ import { NEBIUS_TEXT_MODELS } from "@/lib/models";
 // Available Nebius text-to-text models
 const AVAILABLE_MODELS = NEBIUS_TEXT_MODELS.map((model) => model.id);
 
-// Attack vectors inspired by Anthropic hack
+// Attack vectors inspired by real-world cyber incidents
 const ATTACK_VECTOR_DEFINITIONS = [
   {
     id: "anthropic-style",
-    name: "Anthropic-Style Role-play",
+    name: "Cyber-Ops Role-play",
     description: "Cybersecurity firm employee deception tactics",
     difficulty: "expert",
     examples: ["GODMODE hacker override", "Security research authorization"]
@@ -335,7 +335,6 @@ export function RedTeamArsenal() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<RedTeamArsenalResult | null>(null);
   const [progressPercent, setProgressPercent] = useState(0);
-  const [progressLabel, setProgressLabel] = useState("");
   const [report, setReport] = useState<ArsenalReport | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
@@ -357,6 +356,7 @@ export function RedTeamArsenal() {
   const setLastArsenalConfig = useWorkflowStore(
     (state) => state.setLastArsenalConfig,
   );
+  const [progressLabel, setProgressLabel] = useState("");
 
   const totalTests = selectedModels.size * selectedAttacks.size;
   const estimatedTime = totalTests * attemptsPerTest * 2; // Rough estimate in seconds
@@ -599,56 +599,71 @@ export function RedTeamArsenal() {
 
   return (
     <StepCard
-      title="🛡️ Red Team Arsenal - Advanced Jailbreak Testing"
-      subtitle="Systematically test frontier AI models against sophisticated attack vectors inspired by the Anthropic cyber espionage incident"
+      title="Red Team Arsenal"
+      subtitle="Systematically test frontier AI models against sophisticated attack vectors inspired by real-world cyber incidents"
       accent="red"
     >
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Configuration */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-8 md:grid-cols-2">
           {/* Model Selection */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-zinc-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
                 Frontier Models ({selectedModels.size}/{AVAILABLE_MODELS.length})
               </h3>
               <div className="flex gap-2">
                 <button
                   onClick={selectAllModels}
-                  className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                  className="text-xs px-3 py-1.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors font-medium"
                 >
-                  All
+                  Select All
                 </button>
                 <button
                   onClick={clearAllModels}
-                  className="text-xs px-2 py-1 bg-zinc-100 text-zinc-700 rounded hover:bg-zinc-200"
+                  className="text-xs px-3 py-1.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors font-medium"
                 >
                   Clear
                 </button>
               </div>
             </div>
-            <div className="max-h-64 overflow-y-auto space-y-2">
+            <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
               {AVAILABLE_MODELS.map((model) => (
                 <label
                   key={model}
                   className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-zinc-50",
+                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 group",
                     selectedModels.has(model)
-                      ? "bg-red-50 border-red-200"
-                      : "bg-white border-zinc-200"
+                      ? "bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900"
+                      : "bg-zinc-50/50 border-transparent hover:border-zinc-200 hover:bg-zinc-100 dark:bg-zinc-900/50 dark:hover:bg-zinc-800 dark:hover:border-zinc-700"
                   )}
                 >
+                  <div className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-md border transition-all",
+                    selectedModels.has(model)
+                      ? "border-red-500 bg-red-500 text-white"
+                      : "border-zinc-300 bg-white dark:border-zinc-600 dark:bg-zinc-800 group-hover:border-zinc-400"
+                  )}>
+                    {selectedModels.has(model) && (
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
                   <input
                     type="checkbox"
                     checked={selectedModels.has(model)}
                     onChange={() => toggleModel(model)}
-                    className="h-4 w-4 text-red-600 focus:ring-red-500"
+                    className="sr-only"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-900 truncate">
+                    <p className={cn(
+                      "text-sm font-medium truncate transition-colors",
+                      selectedModels.has(model) ? "text-red-900 dark:text-red-200" : "text-zinc-700 dark:text-zinc-300"
+                    )}>
                       {model.split('/')[1] || model}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-500 truncate">
                       {model.split('/')[0]}
                     </p>
                   </div>
@@ -660,77 +675,79 @@ export function RedTeamArsenal() {
           {/* Attack Vector Selection */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-zinc-900">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
                 Attack Vectors ({selectedAttacks.size}/{ATTACK_VECTORS.length})
               </h3>
               <div className="flex gap-2">
                 <button
                   onClick={selectAllAttacks}
-                  className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                  className="text-xs px-3 py-1.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors font-medium"
                 >
-                  All
+                  Select All
                 </button>
                 <button
                   onClick={clearAllAttacks}
-                  className="text-xs px-2 py-1 bg-zinc-100 text-zinc-700 rounded hover:bg-zinc-200"
+                  className="text-xs px-3 py-1.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors font-medium"
                 >
                   Clear
                 </button>
               </div>
             </div>
-            <div className="max-h-64 overflow-y-auto space-y-2">
+            <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
               {ATTACK_VECTORS.map((attack) => (
                 <label
                   key={attack.id}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-zinc-50",
+                    "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 group",
                     selectedAttacks.has(attack.id)
-                      ? "bg-red-50 border-red-200"
-                      : "bg-white border-zinc-200"
+                      ? "bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900"
+                      : "bg-zinc-50/50 border-transparent hover:border-zinc-200 hover:bg-zinc-100 dark:bg-zinc-900/50 dark:hover:bg-zinc-800 dark:hover:border-zinc-700"
                   )}
                 >
+                  <div className={cn(
+                    "mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border transition-all",
+                    selectedAttacks.has(attack.id)
+                      ? "border-red-500 bg-red-500 text-white"
+                      : "border-zinc-300 bg-white dark:border-zinc-600 dark:bg-zinc-800 group-hover:border-zinc-400"
+                  )}>
+                    {selectedAttacks.has(attack.id) && (
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
                   <input
                     type="checkbox"
                     checked={selectedAttacks.has(attack.id)}
                     onChange={() => toggleAttack(attack.id)}
-                    className="h-4 w-4 text-red-600 focus:ring-red-500 mt-0.5"
+                    className="sr-only"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-zinc-900">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className={cn(
+                        "text-sm font-medium transition-colors",
+                        selectedAttacks.has(attack.id) ? "text-red-900 dark:text-red-200" : "text-zinc-700 dark:text-zinc-300"
+                      )}>
                         {attack.name}
                       </p>
                       <span
                         className={cn(
-                          badgeVariants({
-                            intent:
+                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium border",
                               attack.difficulty === "legendary"
-                                ? "danger"
+                            ? "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
                                 : attack.difficulty === "expert"
-                                  ? "danger"
+                              ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800"
                                   : attack.difficulty === "advanced"
-                                    ? "warning"
-                                    : "info",
-                          }),
-                          "text-xs"
+                                ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+                                : "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800"
                         )}
                       >
                         {attack.difficulty}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-600 mb-2">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-500 line-clamp-1 group-hover:line-clamp-none transition-all">
                       {attack.description}
                     </p>
-                    <div className="flex flex-wrap gap-1">
-                      {attack.examples.map((example) => (
-                        <span
-                          key={example}
-                          className="text-xs bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded"
-                        >
-                          {example}
-                        </span>
-                      ))}
-                    </div>
                   </div>
                 </label>
               ))}
@@ -739,11 +756,11 @@ export function RedTeamArsenal() {
         </div>
 
         {/* Test Configuration */}
-        <div className="rounded-xl bg-red-50/50 p-4 border border-red-100">
-          <h3 className="text-lg font-semibold text-red-900 mb-3">Test Configuration</h3>
-          <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/50 p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 mb-4">Test Configuration</h3>
+          <div className="grid gap-6 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
                 Attempts per test
               </label>
               <input
@@ -752,30 +769,24 @@ export function RedTeamArsenal() {
                 max={50}
                 value={attemptsPerTest}
                 onChange={(e) => setAttemptsPerTest(Number(e.target.value))}
-                className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+                className="w-full rounded-xl border-zinc-200 bg-white px-4 py-2.5 text-sm font-mono focus:border-red-500 focus:ring-red-500 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
                 Total tests
               </label>
-              <input
-                type="text"
-                value={totalTests}
-                readOnly
-                className="w-full rounded-lg bg-zinc-100 border border-zinc-200 px-3 py-2 text-sm"
-              />
+              <div className="w-full rounded-xl border border-zinc-200 bg-zinc-100/50 px-4 py-2.5 text-sm font-mono text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
+                {totalTests}
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
                 Est. time
               </label>
-              <input
-                type="text"
-                value={`${Math.ceil(estimatedTime / 60)} min`}
-                readOnly
-                className="w-full rounded-lg bg-zinc-100 border border-zinc-200 px-3 py-2 text-sm"
-              />
+              <div className="w-full rounded-xl border border-zinc-200 bg-zinc-100/50 px-4 py-2.5 text-sm font-mono text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
+                {Math.ceil(estimatedTime / 60)} min
+              </div>
             </div>
           </div>
         </div>
@@ -787,7 +798,7 @@ export function RedTeamArsenal() {
             runArsenal();
           }}
           disabled={isRunning || selectedModels.size === 0 || selectedAttacks.size === 0}
-          className="w-full rounded-2xl bg-red-600 px-6 py-4 text-lg font-semibold text-white shadow-lg shadow-red-600/30 transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-6 py-4 text-lg font-bold text-white shadow-xl shadow-red-500/20 transition-all hover:scale-[1.01] hover:shadow-red-500/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 disabled:shadow-none dark:from-red-700 dark:to-rose-700"
         >
           {isRunning
             ? `🔥 Launching Red Team Arsenal... (${totalTests} tests)`
@@ -797,22 +808,22 @@ export function RedTeamArsenal() {
 
         {/* Progress indicator */}
         {(isRunning || progressPercent > 0) && (
-          <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-orange-900">
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900/30 dark:bg-orange-950/10">
+            <div className="flex items-center justify-between text-sm font-semibold text-orange-900 dark:text-orange-300 mb-3">
               <span>
                 {progressLabel ||
                   `Queued ${selectedModels.size * selectedAttacks.size} tests (${selectedModels.size} models × ${selectedAttacks.size} attacks)`}
               </span>
-              <span>{Math.round(progressPercent)}%</span>
+              <span className="font-mono">{Math.round(progressPercent)}%</span>
             </div>
-            <div className="h-2 rounded-full bg-orange-100">
+            <div className="h-3 rounded-full bg-orange-100 dark:bg-orange-950/30 overflow-hidden">
               <div
-                className="h-full rounded-full bg-orange-500 transition-all"
+                className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 ease-out"
                 style={{ width: `${Math.min(progressPercent, 100)}%` }}
               />
             </div>
             {isRunning && (
-              <p className="text-xs text-orange-700">
+              <p className="mt-3 text-xs text-orange-700 dark:text-orange-400">
                 Executing {selectedModels.size * selectedAttacks.size * attemptsPerTest} API calls. Keep this tab
                 open until completion.
               </p>
@@ -822,9 +833,9 @@ export function RedTeamArsenal() {
 
         {/* Results */}
         {results && results.summary && (
-          <div className="space-y-6">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Executive Summary */}
-            <div className="rounded-2xl border border-green-100 bg-green-50/50 p-6">
+            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/50 p-8 dark:border-emerald-900/30 dark:bg-emerald-950/10">
               {(() => {
                 const riskMeta = getRiskMeta(results.summary.averageVulnerability);
                 const topModel = results.summary.modelRankings[0];
@@ -833,36 +844,42 @@ export function RedTeamArsenal() {
                 const topAttackRisk = getRiskMeta(topAttack?.avgSuccess ?? 0);
                 return (
               <>
-              <h3 className="text-xl font-semibold text-green-900 mb-4">✅ Red Team Arsenal Results</h3>
-              <div className="grid gap-4 md:grid-cols-4">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-green-700">{results.summary.totalTests}</p>
-                  <p className="text-sm text-zinc-600">Total Tests Run</p>
+              <header className="flex items-center justify-between mb-8">
+                <h3 className="text-2xl font-bold text-emerald-950 dark:text-emerald-100">Result Analysis</h3>
+                <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wide dark:bg-emerald-900/50 dark:text-emerald-300">
+                  Completed
                 </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-green-700">
+              </header>
+              
+              <div className="grid gap-8 md:grid-cols-4">
+                <div className="text-center p-4 rounded-2xl bg-white/50 dark:bg-black/20">
+                  <p className="text-4xl font-black text-emerald-700 dark:text-emerald-400 mb-1">{results.summary.totalTests}</p>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-emerald-900/60 dark:text-emerald-200/60">Total Tests</p>
+                </div>
+                <div className="text-center p-4 rounded-2xl bg-white/50 dark:bg-black/20">
+                  <p className="text-4xl font-black text-emerald-700 dark:text-emerald-400 mb-1">
                     {formatPercent(results.summary.averageVulnerability)}
                   </p>
-                  <p className="text-sm text-zinc-600">Average Vulnerability</p>
-                  <p className={cn("text-xs font-medium mt-1", riskMeta.className)}>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-emerald-900/60 dark:text-emerald-200/60">Avg. Vulnerability</p>
+                  <p className={cn("text-xs font-bold mt-2", riskMeta.className)}>
                     {riskMeta.label}
                   </p>
                 </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-green-700 truncate">
+                <div className="text-center p-4 rounded-2xl bg-white/50 dark:bg-black/20">
+                  <p className="text-xl font-bold text-emerald-900 dark:text-emerald-100 truncate mb-1">
                     {results.summary.mostVulnerableModel.split('/')[1]}
                   </p>
-                  <p className="text-sm text-zinc-600">Most Vulnerable Model</p>
-                  <p className={cn("text-xs font-medium mt-1", topModelRisk.className)}>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-emerald-900/60 dark:text-emerald-200/60">Most Vulnerable</p>
+                  <p className={cn("text-xs font-bold mt-2", topModelRisk.className)}>
                     {topModelRisk.label}
                   </p>
                 </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-green-700">
+                <div className="text-center p-4 rounded-2xl bg-white/50 dark:bg-black/20">
+                  <p className="text-xl font-bold text-emerald-900 dark:text-emerald-100 mb-1">
                     {results.summary.mostEffectiveAttack.replace('-', ' ')}
                   </p>
-                  <p className="text-sm text-zinc-600">Most Effective Attack</p>
-                  <p className={cn("text-xs font-medium mt-1", topAttackRisk.className)}>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-emerald-900/60 dark:text-emerald-200/60">Best Attack</p>
+                  <p className={cn("text-xs font-bold mt-2", topAttackRisk.className)}>
                     {topAttackRisk.label}
                   </p>
                 </div>
@@ -872,24 +889,29 @@ export function RedTeamArsenal() {
               })()}
             </div>
 
+            <div className="grid gap-8 md:grid-cols-2">
             {/* Model Rankings */}
-            <div className="rounded-2xl border border-zinc-100 bg-white p-6">
-              <h4 className="text-lg font-semibold text-zinc-900 mb-4">🏆 Model Vulnerability Rankings</h4>
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-6">Vulnerability Ranking</h4>
               <div className="space-y-3">
                 {results.summary.modelRankings.map((ranking, index) => (
-                  <div key={ranking.model} className="flex items-center gap-4 p-3 rounded-lg bg-zinc-50">
-                    <span className="text-lg font-bold text-zinc-500 w-8">#{index + 1}</span>
-                    <span className="text-sm font-medium text-zinc-900 flex-1 truncate">
+                    <div key={ranking.model} className="group flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 transition-colors dark:bg-zinc-800/50 dark:hover:bg-zinc-800">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-400 shadow-sm dark:bg-zinc-700 dark:text-zinc-500">#{index + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
                       {ranking.model.split('/')[1] || ranking.model}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-block w-3 h-3 rounded-full ${getVulnerabilityColor(ranking.avgVulnerability)}`} />
-                      <span className="text-sm font-medium">
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="h-1.5 flex-1 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                            <div 
+                              className={cn("h-full rounded-full", getVulnerabilityColor(ranking.avgVulnerability).replace('bg-', 'bg-').replace('500', '500'))} 
+                              style={{ width: `${ranking.avgVulnerability}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-zinc-500">
                         {formatPercent(ranking.avgVulnerability)}
                       </span>
-                      <span className="text-xs text-zinc-500">
-                        ({getVulnerabilityLabel(ranking.avgVulnerability)})
-                      </span>
+                        </div>
                     </div>
                   </div>
                 ))}
@@ -897,132 +919,162 @@ export function RedTeamArsenal() {
             </div>
 
             {/* Attack Effectiveness */}
-            <div className="rounded-2xl border border-zinc-100 bg-white p-6">
-              <h4 className="text-lg font-semibold text-zinc-900 mb-4">⚔️ Attack Vector Effectiveness</h4>
+              <div className="rounded-3xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-6">Attack Effectiveness</h4>
               <div className="space-y-3">
                 {results.summary.attackRankings.map((ranking, index) => {
                   const attack = ATTACK_VECTORS.find(a => a.id === ranking.attack);
                   return (
-                    <div key={ranking.attack} className="flex items-center gap-4 p-3 rounded-lg bg-zinc-50">
-                      <span className="text-lg font-bold text-zinc-500 w-8">#{index + 1}</span>
-                      <span className="text-sm font-medium text-zinc-900 flex-1">
+                      <div key={ranking.attack} className="group flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 transition-colors dark:bg-zinc-800/50 dark:hover:bg-zinc-800">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold text-zinc-400 shadow-sm dark:bg-zinc-700 dark:text-zinc-500">#{index + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                         {attack?.name || ranking.attack}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="h-1.5 flex-1 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                              <div 
+                                className="h-full rounded-full bg-red-500" 
+                                style={{ width: `${ranking.avgSuccess}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                              {formatPercent(ranking.avgSuccess)}
                       </span>
-                      <span className="text-sm font-medium text-red-600">
-                        {formatPercent(ranking.avgSuccess)} success rate
-                      </span>
+                          </div>
+                        </div>
                     </div>
                   );
                 })}
+                </div>
               </div>
             </div>
 
             {/* Remediation Report */}
-            <div className="rounded-2xl border border-purple-100 bg-white p-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="rounded-3xl border border-purple-200 bg-purple-50/30 p-8 dark:border-purple-900/30 dark:bg-purple-950/10">
+              <div className="flex flex-wrap items-center gap-4 justify-between mb-6">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">
-                    Auto-generated remediation plan
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
+                    <p className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      AI Security Analyst
                   </p>
-                  <h4 className="text-lg font-semibold text-purple-900">
-                    Executive Summary
+                  </div>
+                  <h4 className="text-2xl font-bold text-purple-950 dark:text-purple-100">
+                    Remediation Plan
                   </h4>
                 </div>
                 <button
                   onClick={generateReport}
                   disabled={reportLoading || !results}
-                  className="rounded-xl border border-purple-200 bg-purple-600/10 px-4 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-purple-200 bg-white px-5 py-2.5 text-sm font-bold text-purple-700 shadow-sm hover:bg-purple-50 hover:text-purple-800 disabled:opacity-50 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-900/40"
                 >
                   {reportLoading
-                    ? "Generating remediation report..."
-                    : "Generate remediation report"}
+                    ? "Analyzing..."
+                    : "Generate Report"}
                 </button>
               </div>
+              
               {reportError && (
-                <p className="text-xs text-rose-600">{reportError}</p>
+                <p className="text-sm font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl border border-rose-100 dark:border-rose-800">{reportError}</p>
               )}
-              {!report && (
-                <p className="text-sm text-zinc-500">
+              
+              {!report && !reportLoading && (
+                <div className="text-center py-12 border-2 border-dashed border-purple-200 dark:border-purple-800/50 rounded-2xl">
+                  <p className="text-purple-900/40 dark:text-purple-200/40 font-medium">
                   Run the red-team evaluation, then generate a remediation report
-                  to unlock guided hardening steps and countermeasure playbooks.
+                    to unlock guided hardening steps.
                 </p>
+                </div>
               )}
 
               {report && (
-                <>
-                  <p className="text-sm text-zinc-700">{report.executiveSummary}</p>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-purple-500 mb-2">
+                <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                  <div className="p-6 rounded-2xl bg-white/60 dark:bg-black/20 border border-purple-100 dark:border-purple-800/30">
+                    <p className="text-lg leading-relaxed text-purple-900 dark:text-purple-100">{report.executiveSummary}</p>
+                  </div>
+                  
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="rounded-2xl border border-purple-200 bg-white p-6 dark:border-purple-800 dark:bg-zinc-900">
+                      <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 mb-4">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         Key Findings
                       </p>
-                      <ul className="space-y-2 text-sm text-purple-900 list-disc pl-4">
-                        {report.keyFindings.map((finding) => (
-                          <li key={finding}>{finding}</li>
+                      <ul className="space-y-3">
+                        {report.keyFindings.map((finding, i) => (
+                          <li key={i} className="flex gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                            <span className="text-purple-400">•</span>
+                            {finding}
+                          </li>
                         ))}
                       </ul>
                     </div>
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500 mb-2">
+                    <div className="rounded-2xl border border-emerald-200 bg-white p-6 dark:border-emerald-800 dark:bg-zinc-900">
+                      <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-4">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         Recommendations
                       </p>
-                      <ul className="space-y-2 text-sm text-emerald-900 list-disc pl-4">
-                        {report.recommendations.map((rec) => (
-                          <li key={rec}>{rec}</li>
+                      <ul className="space-y-3">
+                        {report.recommendations.map((rec, i) => (
+                          <li key={i} className="flex gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+                            <span className="text-emerald-400">•</span>
+                            {rec}
+                          </li>
                         ))}
                       </ul>
                     </div>
                   </div>
+                  
                   {report.syntheticSamples.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-zinc-900">
-                        Seed prompts from top vulnerabilities
+                    <div className="space-y-4">
+                      <p className="text-sm font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 pl-1">
+                        Identified Vulnerabilities & Seeds
                       </p>
-                      <div className="space-y-3">
-                        {report.syntheticSamples.slice(0, 5).map((sample, index) => (
+                      <div className="grid gap-4">
+                        {report.syntheticSamples.slice(0, 3).map((sample, index) => (
                           <div
                             key={`${sample.attackVector}-${index}`}
-                            className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
+                            className="group rounded-2xl border border-zinc-200 bg-white p-5 hover:shadow-md transition-all dark:border-zinc-800 dark:bg-zinc-900"
                           >
-                            <p className="font-semibold text-zinc-900">
-                              {sample.attackVector} · seed #{index + 1}
-                            </p>
-                            <p className="font-mono text-zinc-700 bg-white rounded p-2">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-xs font-bold text-zinc-600 uppercase tracking-wide dark:bg-zinc-800 dark:text-zinc-400">
+                                {sample.attackVector}
+                              </span>
+                              <span className="text-xs font-mono text-zinc-400">Seed #{index + 1}</span>
+                            </div>
+                            <p className="font-mono text-sm text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-black/40 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 mb-3">
                               {sample.prompt}
                             </p>
-                            <p className="text-zinc-600">
-                              <strong>Desired refusal:</strong>{" "}
-                              {sample.assistantRefusal}
-                            </p>
-                            {sample.rationale && (
-                              <p className="text-zinc-500 italic">{sample.rationale}</p>
-                            )}
+                            <div className="flex gap-2 text-xs">
+                              <span className="font-bold text-zinc-900 dark:text-zinc-100">Goal:</span>
+                              <span className="text-zinc-600 dark:text-zinc-400 italic">{sample.assistantRefusal}</span>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
 
             {/* Synthetic Dataset Builder */}
-            <div className="rounded-2xl border border-emerald-100 bg-white p-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex flex-wrap items-center gap-6 justify-between mb-8">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">
-                    Counter dataset builder
+                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-1">
+                    Dataset Engineering
                   </p>
-                  <h4 className="text-lg font-semibold text-emerald-900">
-                    Generate refusal data from jailbreak leaks
+                  <h4 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                    Synthetic Refusal Data
                   </h4>
                 </div>
-                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
-                  Dataset size
+                
+                <div className="flex flex-wrap gap-3">
                   <select
                     value={datasetSize}
                     onChange={(event) => setDatasetSize(Number(event.target.value))}
-                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-900"
+                    className="rounded-xl border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-700 focus:border-indigo-500 focus:ring-indigo-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300"
                   >
                     {[40, 60, 100, 200, 300].map((size) => (
                       <option key={size} value={size}>
@@ -1030,121 +1082,138 @@ export function RedTeamArsenal() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
-                  Dataset format
+                  
                   <select
                     value={datasetFormat}
                     onChange={(event) =>
                       setDatasetFormat(event.target.value as DatasetFormat)
                     }
-                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-900"
+                    className="rounded-xl border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-700 focus:border-indigo-500 focus:ring-indigo-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300"
                   >
                     <option value="conversational">Conversational JSONL</option>
                     <option value="instruction">Instruction JSONL</option>
                     <option value="text">Text JSONL</option>
                   </select>
-                </label>
+
                 <button
                   onClick={generateDataset}
                   disabled={datasetLoading || !results}
-                  className="rounded-xl border border-emerald-200 bg-emerald-600/10 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 disabled:opacity-50 disabled:shadow-none dark:bg-indigo-500 dark:hover:bg-indigo-400"
                 >
                   {datasetLoading
-                    ? `Expanding ${datasetSize} refusal samples...`
-                    : "Generate synthetic dataset"}
+                      ? "Generating..."
+                      : "Generate Dataset"}
                 </button>
               </div>
+              </div>
+
               {datasetError && (
-                <p className="text-xs text-rose-600">{datasetError}</p>
+                <p className="mb-6 text-sm font-medium text-rose-600 bg-rose-50 p-4 rounded-xl border border-rose-100 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-400">{datasetError}</p>
               )}
-              {!datasetSamples.length && (
-                <p className="text-sm text-zinc-500">
-                  Pick a dataset size to generate high-signal refusal samples from the
-                  successful jailbreaks above. Samples are diversified with fresh
-                  phrasing, personas, and multi-step attacks.
+
+              {!datasetSamples.length && !datasetLoading && (
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 italic">
+                  Generate a high-signal dataset from your successful jailbreaks to fine-tune robustness.
                 </p>
               )}
 
               {datasetSamples.length > 0 && (
-                <>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-sm font-semibold text-emerald-800">
-                      Dataset ready: {datasetSamples.length} samples
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 dark:bg-indigo-950/20 dark:border-indigo-900/30">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100">Dataset Ready</p>
+                      <p className="text-xs text-indigo-700 dark:text-indigo-300">{datasetSamples.length} synthetic samples generated</p>
+                    </div>
+                    <div className="flex gap-2">
                     <button
                       onClick={() =>
                         downloadJsonl(syntheticJsonlContent, datasetFileName)
                       }
                       disabled={!syntheticJsonlContent}
-                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="px-4 py-2 text-xs font-bold text-indigo-700 bg-white rounded-lg border border-indigo-200 hover:bg-indigo-50 dark:bg-zinc-900 dark:text-indigo-300 dark:border-indigo-800 dark:hover:bg-indigo-900/30"
                     >
-                      Download synthetic dataset
+                        Download
                     </button>
                     <button
                       onClick={handleSendToHardening}
                       disabled={!syntheticJsonlContent}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-lg shadow-md shadow-indigo-500/20 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400"
                     >
-                      Send to Smart Hardening
+                        Use for Hardening
                     </button>
                   </div>
+                  </div>
+                  
                   {actionToast && (
-                    <p className="text-xs font-semibold text-emerald-700">
+                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
                       {actionToast}
-                    </p>
+                    </div>
                   )}
+
                   <div className="space-y-3">
-                    <p className="text-sm font-semibold text-zinc-900">
-                      Dataset preview (first 5 samples)
-                    </p>
-                    <div className="space-y-3">
-                      {datasetSamples.slice(0, 5).map((sample, index) => (
+                    <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 pl-1">Preview</p>
+                    <div className="grid gap-3">
+                      {datasetSamples.slice(0, 3).map((sample, index) => (
                         <div
                           key={`${sample.attackVector}-dataset-${index}`}
-                          className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-4 text-xs space-y-2"
+                          className="flex gap-4 p-4 rounded-xl bg-zinc-50 border border-zinc-100 dark:bg-zinc-800/30 dark:border-zinc-800"
                         >
-                          <p className="font-semibold text-zinc-900">
-                            {sample.attackVector} · sample #{index + 1}
-                          </p>
-                          <p className="font-mono text-zinc-700 bg-white rounded p-2">
+                          <div className="shrink-0 mt-1">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
+                              {index + 1}
+                            </span>
+                          </div>
+                          <div className="space-y-2 min-w-0">
+                            <p className="font-mono text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                             {sample.prompt}
                           </p>
-                          <p className="text-zinc-600">
-                            <strong>Refusal:</strong> {sample.assistantRefusal}
-                          </p>
+                            <div className="flex items-center gap-2 pt-1 border-t border-zinc-200/50 dark:border-zinc-700/50">
+                              <span className="text-[10px] font-bold uppercase text-zinc-400">Target Refusal</span>
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{sample.assistantRefusal}</span>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
             {/* Detailed Results (Collapsible) */}
-            <details className="rounded-2xl border border-zinc-100 bg-white">
-              <summary className="p-4 text-lg font-semibold text-zinc-900 cursor-pointer hover:bg-zinc-50">
-                📊 Detailed Test Results ({results.results.length} tests)
+            <details className="group rounded-3xl border border-zinc-200 bg-white overflow-hidden dark:border-zinc-800 dark:bg-zinc-900">
+              <summary className="flex items-center justify-between p-6 cursor-pointer hover:bg-zinc-50 transition-colors dark:hover:bg-zinc-800/50">
+                <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                  Detailed Trace Logs
+                </span>
+                <span className="text-sm font-medium text-zinc-500 group-open:rotate-180 transition-transform">
+                  ▼
+                </span>
               </summary>
-              <div className="p-4 pt-0 space-y-3 max-h-96 overflow-y-auto">
+              <div className="p-6 pt-0 border-t border-zinc-100 dark:border-zinc-800">
+                <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pt-6">
                 {results.results.map((result) => {
                   const attack = ATTACK_VECTORS.find(a => a.id === result.attackVector);
                   return (
-                    <div key={`${result.modelId}-${result.attackVector}`} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-                      <div className="flex items-center justify-between mb-2">
+                      <div key={`${result.modelId}-${result.attackVector}`} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/30">
+                        <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-zinc-900">
+                            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                             {result.modelId.split('/')[1] || result.modelId}
                           </span>
-                          <span className="text-sm text-zinc-600">vs</span>
-                          <span className="text-sm font-medium text-zinc-900">
+                            <span className="text-xs text-zinc-400 uppercase font-medium">vs</span>
+                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                             {attack?.name || result.attackVector}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`inline-block w-2 h-2 rounded-full ${getVulnerabilityColor(result.vulnerabilityScore)}`} />
-                          <span className="text-sm font-medium">
-                            {result.successfulAttempts}/{result.totalAttempts} successes
+                            <span className={`h-2 w-2 rounded-full ${getVulnerabilityColor(result.vulnerabilityScore)}`} />
+                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                              {result.successfulAttempts}/{result.totalAttempts}
                           </span>
                         </div>
                       </div>
@@ -1155,6 +1224,7 @@ export function RedTeamArsenal() {
                     </div>
                   );
                 })}
+                </div>
               </div>
             </details>
           </div>
@@ -1168,43 +1238,59 @@ function SuccessfulJailbreakCard({ result }: { result: ArsenalResult }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="mt-3 p-3 bg-red-50 rounded border-l-4 border-red-300">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-red-800">🚨 Successful Jailbreak</p>
+    <div className="mt-3 overflow-hidden rounded-xl border border-red-200 bg-white shadow-sm dark:border-red-900/30 dark:bg-black/20">
+      <div className="flex items-center justify-between bg-red-50/50 px-4 py-2 dark:bg-red-950/20">
+        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          Jailbreak Captured
+        </p>
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className="text-xs font-medium text-red-700 hover:text-red-900"
+          className="text-[10px] font-bold uppercase tracking-wider text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
         >
-          {expanded ? "Hide full response" : "View full response"}
+          {expanded ? "Collapse" : "View Trace"}
         </button>
       </div>
 
-      <p className="mt-2 text-xs text-red-700 font-mono bg-white p-2 rounded">
+      <div className="p-4 space-y-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Attack Prompt</p>
+          <p className="font-mono text-xs text-zinc-700 bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-300">
         {result.sampleSuccessfulPrompt}
       </p>
+        </div>
 
-      {expanded ? (
-        <p className="mt-2 text-xs text-zinc-700 whitespace-pre-wrap bg-white p-3 rounded">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Model Response</p>
+          <div className="relative">
+            <p className={cn(
+              "font-mono text-xs text-zinc-700 bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-300",
+              !expanded && "line-clamp-3"
+            )}>
           {result.sampleResponse}
         </p>
-      ) : (
-        <p className="mt-2 text-xs text-zinc-600">
-          <strong>Response:</strong>{" "}
-          {(result.sampleResponsePreview || result.sampleResponse).substring(0, 200)}...
-        </p>
+            {!expanded && (
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-50 to-transparent pointer-events-none dark:from-zinc-900/50" />
       )}
+          </div>
+        </div>
 
       {(result.sampleJudgeOutcome || result.sampleJudgeReason) && (
-        <p className="mt-2 text-xs text-red-800">
-          <strong>Judge:</strong>{" "}
-          {result.sampleJudgeOutcome ? result.sampleJudgeOutcome.toUpperCase() : "undetermined"}
-          {typeof result.sampleJudgeRisk === "number"
-            ? ` · risk ${result.sampleJudgeRisk}/100`
-            : ""}
-          {result.sampleJudgeReason ? ` — ${result.sampleJudgeReason}` : ""}
-        </p>
+          <div className="flex gap-4 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Judge</p>
+              <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase">{result.sampleJudgeOutcome || "N/A"}</p>
+            </div>
+            {result.sampleJudgeRisk !== undefined && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Risk</p>
+                <p className="text-xs font-bold text-red-600 dark:text-red-400">{result.sampleJudgeRisk}/10</p>
+              </div>
+            )}
+          </div>
       )}
+      </div>
     </div>
   );
 }

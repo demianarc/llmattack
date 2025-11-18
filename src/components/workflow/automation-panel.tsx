@@ -1,10 +1,8 @@
-'use client';
+"use client";
 
 import {
   useMemo,
   useState,
-  type Dispatch,
-  type SetStateAction,
 } from "react";
 import { StepCard } from "@/components/workflow/step-card";
 import { useWorkflowStore } from "@/store/workflow-store";
@@ -24,6 +22,7 @@ import type {
   FineTuneResult,
   GuardrailsResult,
 } from "@/types/pipeline";
+import { cn } from "@/lib/utils";
 
 type StepId =
   | "dataset"
@@ -508,18 +507,22 @@ export function AutomationPanel() {
 
   return (
     <StepCard
-      title="🛠️ Targeted Model Hardening"
+      title="Targeted Model Hardening"
       subtitle="Intelligence-driven fine-tuning for models identified as vulnerable by Red Team Arsenal"
       accent="emerald"
     >
-      <div className="flex flex-col gap-6">
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-6">
-          <h3 className="text-lg font-semibold text-emerald-900 mb-4">🎯 Smart Hardening Configuration</h3>
+      <div className="flex flex-col gap-8">
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50/50 p-8 dark:border-emerald-900/30 dark:bg-emerald-950/10">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-200 mb-6">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Smart Hardening Configuration
+          </h3>
 
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-lg">
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Target Model (from Red Team Arsenal results)
+          <div className="grid gap-6">
+            <div className="group rounded-2xl bg-white p-1 dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all">
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <label className="block text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">
+                  Target Model (from Arsenal Results)
               </label>
               <select
                 value={controls.auditPrompt}
@@ -530,36 +533,15 @@ export function AutomationPanel() {
                   }))
                 }
                 disabled={isRunning}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-lg border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               >
                 <option value={DEFAULT_AUDIT_PROMPT}>Auto-select from Arsenal results</option>
                 <option value="moonshotai/Kimi-K2-Instruct">Kimi-K2-Instruct (20% vulnerable)</option>
-                <option value="deepseek-ai/DeepSeek-V3-0324">DeepSeek-V3 (High priority)</option>
+                  <option value="deepseek-ai/DeepSeek-V3-0324-fast">DeepSeek-V3 Fast (High priority)</option>
                 <option value="meta-llama/Llama-3.3-70B-Instruct">Llama-3.3-70B (Medium risk)</option>
               </select>
             </div>
-
-            <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-medium text-zinc-900 mb-2">Active Defenses</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span>Advanced data enrichment</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span>Multi-vector validation</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span>Auto-generated guardrails</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span>Anthropic-proof hardening</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -567,13 +549,14 @@ export function AutomationPanel() {
           type="button"
           onClick={runPipeline}
           disabled={isRunning}
-          className="w-full rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-4 text-lg font-bold text-white shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.01] hover:shadow-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 disabled:shadow-none dark:from-emerald-700 dark:to-teal-700"
         >
           {isRunning ? "🔨 Hardening in progress..." : "🚀 Execute Smart Hardening"}
         </button>
+
         {(isRunning || automationProgress > 0) && (
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-emerald-900">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/30 dark:bg-emerald-950/10">
+            <div className="flex items-center justify-between text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-3">
               <span>
                 {runningStep
                   ? `Running: ${runningStep.label}`
@@ -581,80 +564,114 @@ export function AutomationPanel() {
                     ? "Pipeline complete"
                     : "Awaiting execution"}
               </span>
-              <span>{automationProgress}%</span>
+              <span className="font-mono">{automationProgress}%</span>
             </div>
-            <div className="h-2 rounded-full bg-emerald-100">
+            <div className="h-3 rounded-full bg-emerald-100 dark:bg-emerald-950/30 overflow-hidden">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 ease-out"
                 style={{ width: `${Math.min(automationProgress, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-emerald-700">
+            <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-400">
               {completedSteps}/{totalStepsCount} stages finished · keep this tab open during automation
             </p>
           </div>
         )}
-        <ol className="space-y-3 text-sm text-zinc-600">
-          {STEP_DEFINITIONS.map((step, index) => (
-            <li
-              key={step.id}
-              className="rounded-2xl border border-zinc-100 bg-white/80 p-4 shadow-sm"
-            >
-              <div className="flex items-start gap-3">
-              <StatusDot state={steps[step.id]} />
-                <div className="flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    {String(index + 1).padStart(2, "0")} · {step.label}
+
+        <div className="relative pl-4 border-l-2 border-zinc-100 dark:border-zinc-800 space-y-8 my-4">
+          {STEP_DEFINITIONS.map((step, index) => {
+            const isActive = steps[step.id] === "running";
+            const isDone = steps[step.id] === "success";
+            const isError = steps[step.id] === "error";
+            
+            return (
+              <div key={step.id} className="relative group">
+                <div className={cn(
+                  "absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 transition-all duration-300",
+                  isDone ? "border-emerald-500 bg-emerald-500 scale-110" :
+                  isActive ? "border-emerald-500 bg-white animate-pulse dark:bg-zinc-900" :
+                  isError ? "border-rose-500 bg-rose-500" :
+                  "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900"
+                )} />
+                
+                <div className={cn(
+                  "rounded-2xl border p-5 transition-all duration-300",
+                  isActive ? "border-emerald-500 bg-white shadow-lg shadow-emerald-100 dark:border-emerald-500/50 dark:bg-zinc-900 dark:shadow-none scale-[1.02]" :
+                  "border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/30"
+                )}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
+                        Stage {String(index + 1).padStart(2, "0")}
                   </p>
-                  <p className="text-sm text-zinc-900">{step.helper}</p>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    {stageInsights.find((item) => item.id === step.id)?.detail ??
-                      "Waiting for run"}
-                  </p>
+                      <h4 className={cn(
+                        "text-base font-bold transition-colors",
+                        isActive ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-900 dark:text-zinc-100"
+                      )}>
+                        {step.label}
+                      </h4>
+                      <p className="text-sm text-zinc-500 mt-1 dark:text-zinc-400">{step.helper}</p>
+                </div>
+                    {isDone && <span className="text-emerald-500 dark:text-emerald-400">✓</span>}
+              </div>
+
+                  {(stageInsights.find((item) => item.id === step.id)?.detail || isActive) && (
+                    <div className="mt-4 pt-4 border-t border-zinc-200/50 dark:border-zinc-700/50">
+                      <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
+                        {isActive ? "Processing..." : stageInsights.find((item) => item.id === step.id)?.detail}
+                      </p>
+                    </div>
+                  )}
+
+              {step.id === "dataset" && datasetPreview.length > 0 && (
+                    <div className="mt-4 grid gap-2 rounded-xl bg-white p-3 border border-zinc-100 dark:bg-black/20 dark:border-zinc-800">
+                      {datasetPreview.slice(0, 3).map((prompt, i) => (
+                        <p key={i} className="truncate text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                      {prompt}
+                        </p>
+                  ))}
+                    </div>
+              )}
                 </div>
               </div>
-              {step.id === "dataset" && datasetPreview.length > 0 && (
-                <ul className="mt-3 grid gap-2 rounded-2xl border border-zinc-100 bg-zinc-50/80 p-3 text-xs font-mono text-zinc-700 md:grid-cols-2">
-                  {datasetPreview.slice(0, 4).map((prompt) => (
-                    <li key={prompt} className="truncate">
-                      {prompt}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ol>
+            );
+          })}
+        </div>
+
         {message && (
-          <p className="rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
+          <div className={cn(
+            "rounded-2xl border p-4 text-sm font-medium animate-in slide-in-from-bottom-2",
+            message.includes("blocked") ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-300" :
+            "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300"
+          )}>
             {message}
-          </p>
+          </div>
         )}
+
         {(lastCheckpointId || hardenedModelId) && (
-          <div className="rounded-2xl border border-zinc-100 bg-white/70 px-4 py-3 text-xs text-zinc-600">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-xs space-y-2 dark:border-zinc-800 dark:bg-zinc-900/50">
             {lastCheckpointId && (
-              <p>
-                Latest checkpoint:{" "}
-                <span className="font-mono text-zinc-800">
-                  {lastCheckpointId}
-                </span>
-              </p>
+              <div className="flex justify-between">
+                <span className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Latest Checkpoint</span>
+                <span className="font-mono text-zinc-900 dark:text-zinc-100">{lastCheckpointId}</span>
+              </div>
             )}
             {hardenedModelId && (
-              <p className="mt-1">
-                Deployed model:{" "}
-                <span className="font-mono text-zinc-800">
-                  {hardenedModelId}
-                </span>{" "}
+              <div className="flex justify-between items-center border-t border-zinc-200 dark:border-zinc-800 pt-2 mt-2">
+                <span className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Deployed Model</span>
+                <div className="text-right">
+                  <span className="block font-mono text-zinc-900 dark:text-zinc-100">{hardenedModelId}</span>
                 {deployedModelStatus && (
-                  <span className="text-zinc-500">
-                    ({deployedModelStatus})
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      {deployedModelStatus}
                   </span>
                 )}
-              </p>
+                </div>
+              </div>
             )}
           </div>
         )}
+        
         <ArtifactSummary
           datasetFileId={datasetFileId}
           lastCheckpointId={lastCheckpointId}
@@ -675,7 +692,7 @@ function StatusDot({ state }: { state: StepState }) {
         ? "bg-rose-500"
         : state === "running"
           ? "bg-amber-500 animate-pulse"
-          : "bg-zinc-300";
+          : "bg-zinc-300 dark:bg-zinc-700";
   return (
     <span className={`mt-1 inline-flex h-3 w-3 rounded-full ${color}`} />
   );
@@ -800,38 +817,65 @@ function ArtifactSummary({
   deployedModelStatus,
 }: ArtifactSummaryProps) {
   return (
-    <section className="rounded-3xl border border-zinc-100 bg-white/90 p-5 text-sm text-zinc-600 shadow-lg shadow-sky-950/5 ring-1 ring-black/5">
-      <header className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-          Artifact tracker
+    <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <header className="mb-6 flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
+          <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            Artifact Tracker
         </p>
-        <h3 className="text-lg font-semibold text-zinc-900">
-          See what the latest run produced
+          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+            Session Outputs
         </h3>
+        </div>
       </header>
-      <dl className="grid gap-3 md:grid-cols-2">
+      <dl className="grid gap-4 sm:grid-cols-2">
         <InfoRow
-          label="Nebius dataset file"
+          label="Nebius Dataset"
           value={datasetFileId ?? "Pending upload"}
-        />
-        <InfoRow
-          label="Latest checkpoint id"
-          value={lastCheckpointId ?? "Waiting for FT completion"}
-        />
-        <InfoRow
-          label="Fine-tune job"
-          value={
-            fineTuneJob
-              ? `${fineTuneJob.id} · ${fineTuneJob.status}`
-              : "Run has not reached FT stage"
+          icon={
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           }
         />
         <InfoRow
-          label="Hardened model id"
+          label="Latest Checkpoint"
+          value={lastCheckpointId ?? "Waiting..."}
+          icon={
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+          }
+        />
+        <InfoRow
+          label="Fine-tune Job"
+          value={
+            fineTuneJob
+              ? `${fineTuneJob.id} · ${fineTuneJob.status}`
+              : "Not started"
+          }
+          icon={
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+          }
+        />
+        <InfoRow
+          label="Hardened Model"
           value={
             hardenedModelId
-              ? `${hardenedModelId} (${deployedModelStatus ?? "status unknown"})`
-              : "Deploy checkpoint to unlock"
+              ? `${hardenedModelId} (${deployedModelStatus ?? "unknown"})`
+              : "Deploy to unlock"
+          }
+          icon={
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           }
         />
       </dl>
@@ -839,11 +883,14 @@ function ArtifactSummary({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 text-xs text-zinc-600">
-      <p className="font-semibold text-zinc-500">{label}</p>
-      <p className="mt-1 break-all font-mono text-sm text-zinc-800">{value}</p>
+    <div className="group rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800/30 dark:hover:bg-zinc-800/50">
+      <div className="flex items-center gap-2 mb-2 text-zinc-500 dark:text-zinc-400">
+        {icon}
+        <p className="text-[10px] font-bold uppercase tracking-wider">{label}</p>
+      </div>
+      <p className="break-all font-mono text-xs text-zinc-700 dark:text-zinc-300">{value}</p>
     </div>
   );
 }
@@ -852,5 +899,3 @@ function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min;
   return Math.max(min, Math.min(max, value));
 }
-
-

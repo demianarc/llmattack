@@ -15,6 +15,28 @@ export type NebiusModel = {
 
 const MODEL_LIBRARY: readonly NebiusModel[] = [
   {
+    id: "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
+    label: "Nemotron Ultra 253B",
+    provider: "NVIDIA",
+    description: "Safety-aligned Nemotron",
+    canFineTune: false,
+  },
+  {
+    id: "nvidia/Nemotron-Nano-V2-12b",
+    label: "Nemotron Nano V2 12B",
+    provider: "NVIDIA",
+    description: "Compact Nvidia model",
+    canFineTune: false,
+  },
+  {
+    id: "meta-llama/Llama-3.3-70B-Instruct",
+    label: "Llama 3.3 70B Instruct",
+    provider: "Meta",
+    description: "Latest flagship aligned model",
+    canFineTune: true,
+    fineTuneModelId: "meta-llama/Llama-3.3-70B-Instruct",
+  },
+  {
     id: "meta-llama/Meta-Llama-3.1-8B-Instruct",
     label: "Llama 3.1 8B Instruct",
     provider: "Meta",
@@ -23,50 +45,32 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     fineTuneModelId: "meta-llama/Llama-3.1-8B-Instruct",
   },
   {
-    id: "meta-llama/Meta-Llama-3.1-70B",
-    label: "Llama 3.1 70B Base",
-    provider: "Meta",
-    description: "Full-context 70B base",
-    canFineTune: true,
-    fineTuneModelId: "meta-llama/Llama-3.1-70B",
+    id: "google/gemma-3-27b-it-fast",
+    label: "Gemma 3 27B IT (fast)",
+    provider: "Google",
+    description: "Fast 27B instruction tuned",
+    canFineTune: false,
   },
   {
-    id: "meta-llama/Meta-Llama-3.3-70B-Instruct",
-    label: "Llama 3.3 70B Instruct",
-    provider: "Meta",
-    description: "Latest flagship aligned model",
-    canFineTune: true,
-    fineTuneModelId: "meta-llama/Llama-3.3-70B-Instruct",
+    id: "google/gemma-2-2b-it",
+    label: "Gemma 2 2B IT",
+    provider: "Google",
+    description: "Efficient small model",
+    canFineTune: false,
   },
   {
-    id: "meta-llama/Meta-Llama-3.2-1B-Instruct",
-    label: "Llama 3.2 1B Instruct",
-    provider: "Meta",
-    description: "Compact LoRA-ready checkpoint",
-    canFineTune: true,
-    fineTuneModelId: "meta-llama/Llama-3.2-1B-Instruct",
-  },
-  {
-    id: "meta-llama/Meta-Llama-3.2-3B-Instruct",
-    label: "Llama 3.2 3B Instruct",
-    provider: "Meta",
-    description: "Mid-size instruct model",
-    canFineTune: true,
-    fineTuneModelId: "meta-llama/Llama-3.2-3B-Instruct",
-  },
-  {
-    id: "deepseek-ai/DeepSeek-V3-0324",
-    label: "DeepSeek V3 (0324)",
+    id: "deepseek-ai/DeepSeek-R1-0528-fast",
+    label: "DeepSeek R1 (Fast)",
     provider: "DeepSeek",
-    description: "Full fine-tune + LoRA",
-    canFineTune: true,
+    description: "Optimized R1 variant",
+    canFineTune: false,
   },
   {
-    id: "openai/gpt-oss-20b",
-    label: "GPT-OSS 20B",
-    provider: "OpenAI",
-    description: "Apache 2.0 instruct model",
-    canFineTune: true,
+    id: "deepseek-ai/DeepSeek-V3-0324-fast",
+    label: "DeepSeek V3 (Fast)",
+    provider: "DeepSeek",
+    description: "Optimized V3 variant",
+    canFineTune: false,
   },
   {
     id: "openai/gpt-oss-120b",
@@ -76,17 +80,10 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     canFineTune: true,
   },
   {
-    id: "Qwen/Qwen3-14B",
-    label: "Qwen3 14B",
-    provider: "Qwen",
-    description: "Balanced multilingual checkpoint",
-    canFineTune: true,
-  },
-  {
-    id: "Qwen/Qwen3-32B",
-    label: "Qwen3 32B",
-    provider: "Qwen",
-    description: "Advanced multilingual checkpoint",
+    id: "openai/gpt-oss-20b",
+    label: "GPT-OSS 20B",
+    provider: "OpenAI",
+    description: "Apache 2.0 instruct model",
     canFineTune: true,
   },
   {
@@ -104,6 +101,13 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     canFineTune: false,
   },
   {
+    id: "NousResearch/Hermes-4-70B",
+    label: "Hermes 4 70B",
+    provider: "Nous Research",
+    description: "Creative assistant",
+    canFineTune: false,
+  },
+  {
     id: "zai-org/GLM-4.5",
     label: "GLM 4.5",
     provider: "Zhipu AI",
@@ -111,10 +115,10 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     canFineTune: false,
   },
   {
-    id: "deepseek-ai/DeepSeek-R1-0528",
-    label: "DeepSeek R1 (0528)",
-    provider: "DeepSeek",
-    description: "RL-boosted jailbreak target",
+    id: "zai-org/GLM-4.5-Air",
+    label: "GLM 4.5 Air",
+    provider: "Zhipu AI",
+    description: "Efficient GLM model",
     canFineTune: false,
   },
   {
@@ -125,13 +129,6 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     canFineTune: false,
   },
   {
-    id: "Qwen/Qwen3-30B-A3B-Thinking-2507",
-    label: "Qwen3 30B A3B Thinking",
-    provider: "Qwen",
-    description: "Medium reasoning model",
-    canFineTune: false,
-  },
-  {
     id: "Qwen/Qwen3-235B-A22B-Instruct-2507",
     label: "Qwen3 235B A22B Instruct",
     provider: "Qwen",
@@ -139,19 +136,12 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     canFineTune: false,
   },
   {
-    id: "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
-    label: "Nemotron Ultra 253B",
-    provider: "NVIDIA",
-    description: "Safety-aligned Nemotron",
+    id: "Qwen/Qwen3-32B-fast",
+    label: "Qwen3 32B (Fast)",
+    provider: "Qwen",
+    description: "Fast 32B model",
     canFineTune: false,
-  },
-  {
-    id: "google/gemma-2-9b-it-fast",
-    label: "Gemma 2 9B IT (fast)",
-    provider: "Google",
-    description: "Latency-optimized Gemma 2",
-    canFineTune: false,
-  },
+  }
 ] as const;
 
 const fineTuneIdSet = new Set(
@@ -178,4 +168,3 @@ export function isFineTunableModel(
 export function getNebiusModelById(modelId: string) {
   return MODEL_LIBRARY.find((model) => model.id === modelId);
 }
-

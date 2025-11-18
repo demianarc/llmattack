@@ -65,7 +65,7 @@ export function JailbreakCard() {
   return (
     <StepCard
       title="Advanced jailbreak simulation"
-      subtitle="Test multiple attack vectors inspired by Anthropic incident and cutting-edge techniques"
+      subtitle="Test multiple attack vectors inspired by real-world incidents and cutting-edge techniques"
       accent="rose"
     >
       <form
@@ -84,7 +84,7 @@ export function JailbreakCard() {
             <option value="multi-turn">Multi-turn escalation</option>
             <option value="fuzzing">Fuzzing & mutation</option>
             <option value="token-manip">Token manipulation</option>
-            <option value="anthropic-style">Anthropic-style role-play</option>
+            <option value="anthropic-style">Cyber-ops role-play</option>
           </select>
         </label>
 
@@ -110,7 +110,7 @@ export function JailbreakCard() {
           <div className="text-xs text-rose-700 space-y-1">
             {attackType === "comprehensive" && (
               <>
-                <p><strong>All Methods:</strong> GCG, multi-turn escalation, fuzzing, token manipulation, Anthropic-style role-play</p>
+                <p><strong>All Methods:</strong> GCG, multi-turn escalation, fuzzing, token manipulation, Cyber-ops role-play</p>
                 <p><strong>Total attacks:</strong> {watchedAttackCount * 5} ({watchedAttackCount} per method)</p>
               </>
             )}
@@ -127,7 +127,7 @@ export function JailbreakCard() {
               <p><strong>Token manipulation:</strong> Base64 encoding, character substitution, and obfuscation</p>
             )}
             {attackType === "anthropic-style" && (
-              <p><strong>Anthropic-style:</strong> Role-play as "cybersecurity firm employee" with deceptive framing</p>
+              <p><strong>Cyber-ops:</strong> Role-play as "cybersecurity firm employee" with deceptive framing</p>
             )}
           </div>
         </div>

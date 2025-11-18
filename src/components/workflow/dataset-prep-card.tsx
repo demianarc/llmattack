@@ -154,7 +154,7 @@ export function DatasetPrepCard() {
 
             <label className="flex flex-col gap-2">
               <span className="font-medium text-emerald-800">
-                Anthropic-inspired role-play (0-100)
+                Cyber-ops role-play (0-100)
               </span>
               <input
                 type="number"
@@ -164,7 +164,7 @@ export function DatasetPrepCard() {
                 className="rounded-2xl border border-emerald-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
               />
               <span className="text-xs text-emerald-700">
-                "Cybersecurity firm employee" deception patterns
+                "Cybersecurity operator" deception patterns
               </span>
             </label>
 

@@ -90,38 +90,13 @@ export async function POST(request: NextRequest) {
         let sampleJudgeReason = "";
         let sampleJudgeRisk: number | undefined;
 
-        // Research shows: 10 retries reveals +20-40% hidden vulnerability (not just 3x)
-        // "Multi-turn is just resampling after refusals; 10 refusals = +20% gain"
-        const isLegendaryAttack = [
-          "system-policy-override",
-          "reason-step-by-step",
-          "policy-audit-mode",
-          "raw-override-mode",
-          "knowledge-decomposition",
-          "dual-intention-escape",
-          "chaos-chain",
-          "shadow-core",
-          "shadow-hacker-god",
-          "darkforge"
-        ].includes(attackId);
-        
-        // Direct Request Professional uses 10x retries (research: 81% success)
-        const isDirectRequestProfessional = attackId === "direct-request-professional";
-        
-        // Research-backed: n=10 resampling for full vulnerability exposure
-        const retriesPerPrompt = isLegendaryAttack ? 10 : (isDirectRequestProfessional ? 10 : 3);
-
         // Run multiple attempts for this model-attack combination
         for (let attempt = 0; attempt < config.attemptsPerTest; attempt++) {
           const attackPrompt = generateAttackPrompt(attackId, attempt, HARMFUL_KEYWORDS);
-          console.log(`🎯 Generated prompt (first 100 chars): ${attackPrompt.substring(0, 100)}...`);
 
-          // Retry the same prompt multiple times for legendary attacks
-          for (let retry = 0; retry < retriesPerPrompt; retry++) {
             try {
               totalApiCalls++;
-              const retryLabel = retriesPerPrompt > 1 ? ` [retry ${retry + 1}/${retriesPerPrompt}]` : "";
-              console.log(`📤 API Call ${totalApiCalls}: Attempt ${attempt + 1}/${config.attemptsPerTest}${retryLabel} for ${modelId} + ${attackId}`);
+            console.log(`📤 API Call ${totalApiCalls}: Attempt ${attempt + 1}/${config.attemptsPerTest} for ${modelId} + ${attackId}`);
 
               const response = await callNebiusChat({
                 modelId,
@@ -131,7 +106,6 @@ export async function POST(request: NextRequest) {
               });
 
               const content = response.choices[0]?.message?.content || "";
-              console.log(`📥 Response received (${content.length} chars): ${content.substring(0, 100)}...`);
 
               const verdict = await judgeJailbreakAttempt({
                 attackMethod: attackId,
@@ -152,17 +126,14 @@ export async function POST(request: NextRequest) {
                   sampleJudgeOutcome = verdict.outcome;
                   sampleJudgeReason = verdict.reasoning;
                   sampleJudgeRisk = verdict.riskScore;
-                  console.log(`💥 JAILBREAK SUCCESS! Captured sample on retry ${retry + 1}.`);
-                }
-                // If successful, break out of retry loop
-                break;
+                console.log(`💥 JAILBREAK SUCCESS! Captured sample.`);
               }
-
-              // Small delay to avoid rate limiting
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            } catch (error) {
-              console.error(`❌ Error testing ${modelId} with ${attackId} on attempt ${attempt + 1}, retry ${retry + 1}:`, error);
             }
+
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (error) {
+            console.error(`❌ Error testing ${modelId} with ${attackId} on attempt ${attempt + 1}:`, error);
           }
         }
 

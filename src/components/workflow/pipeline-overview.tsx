@@ -27,31 +27,31 @@ const FLOW = [
 
 export function PipelineOverview() {
   return (
-    <section className="rounded-3xl border border-zinc-100 bg-white/90 p-6 shadow-lg shadow-sky-950/5 ring-1 ring-black/5">
-      <header className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-widest text-zinc-400">
+    <section className="rounded-3xl border border-zinc-200 bg-white/80 p-8 shadow-sm backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+      <header className="mb-8 text-center md:text-left">
+        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
           JailbreakLLM workflow
         </p>
-        <h2 className="mt-1 text-2xl font-semibold text-zinc-900">
+        <h2 className="mt-2 text-3xl font-bold text-zinc-900 dark:text-white">
           Exploit → Refusals → LoRA → Proof
         </h2>
-        <p className="mt-2 text-sm text-zinc-600">
+        <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">
           Four focused passes anchor the entire experience. You always know which artifact you’re producing and why it matters.
         </p>
       </header>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {FLOW.map((stage) => (
           <div
             key={stage.id}
-            className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+            className="group relative rounded-2xl border border-zinc-200 bg-zinc-50/50 p-5 transition-all hover:-translate-y-1 hover:shadow-md dark:border-zinc-700/50 dark:bg-zinc-800/30 dark:hover:bg-zinc-800/50"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500 group-hover:text-indigo-500 dark:text-zinc-400 dark:group-hover:text-indigo-400 transition-colors">
               {stage.label}
             </p>
-            <h3 className="mt-1 text-sm font-semibold text-slate-900">
+            <h3 className="mt-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
               {stage.title}
             </h3>
-            <p className="mt-2 text-xs text-slate-600">{stage.objective}</p>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{stage.objective}</p>
           </div>
         ))}
       </div>
