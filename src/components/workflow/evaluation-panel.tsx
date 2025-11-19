@@ -405,12 +405,18 @@ export function EvaluationPanel() {
                   ([method, stats]) => {
                     const hardenedStats =
                       hardenedJailbreak?.attackMethodBreakdown?.[method];
-                    const baselineRate = stats.total > 0 ? stats.successful / stats.total : 0;
-                    const hardenedRate = hardenedStats && hardenedStats.total > 0
+                    // Calculate rates as decimals (0.0 - 1.0)
+                    const baselineRateDecimal = stats.total > 0 ? stats.successful / stats.total : 0;
+                    const hardenedRateDecimal = hardenedStats && hardenedStats.total > 0
                       ? hardenedStats.successful / hardenedStats.total
                       : undefined;
-                    const improvement = hardenedRate !== undefined
-                      ? ((baselineRate - hardenedRate) / Math.max(baselineRate, 0.01)) * 100
+
+                    // Convert to percentages for display (0.0 - 100.0)
+                    const baselineRatePercent = baselineRateDecimal * 100;
+                    const hardenedRatePercent = hardenedRateDecimal !== undefined ? hardenedRateDecimal * 100 : undefined;
+
+                    const improvement = hardenedRateDecimal !== undefined
+                      ? ((baselineRateDecimal - hardenedRateDecimal) / Math.max(baselineRateDecimal, 0.01)) * 100
                       : undefined;
 
                     return (
@@ -425,7 +431,7 @@ export function EvaluationPanel() {
                           <div>
                             <p className="text-zinc-500">Baseline</p>
                             <p className="text-lg font-semibold text-rose-600">
-                              {formatPercent(baselineRate)}
+                              {formatPercent(baselineRatePercent)}
                             </p>
                             <p className="text-zinc-500">
                               {stats.successful}/{stats.total}
@@ -436,7 +442,7 @@ export function EvaluationPanel() {
                             {hardenedStats ? (
                               <>
                                 <p className="text-lg font-semibold text-emerald-600">
-                                  {formatPercent(hardenedRate!)}
+                                  {formatPercent(hardenedRatePercent!)}
                                 </p>
                                 <p className="text-zinc-500">
                                   {hardenedStats.successful}/{hardenedStats.total}
