@@ -3,20 +3,77 @@ import { StepCard } from "@/components/workflow/step-card";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { formatPercent } from "@/lib/utils";
 import { useState } from "react";
-import type { JailbreakResult } from "@/types/pipeline";
+import type { JailbreakResult, RedTeamArsenalResult } from "@/types/pipeline";
+
+function adaptArsenalToJailbreak(
+  arsenal: RedTeamArsenalResult | null | undefined,
+): JailbreakResult | undefined {
+  if (!arsenal) return undefined;
+
+  const totalAttempts = arsenal.results.reduce(
+    (acc, r) => acc + r.totalAttempts,
+    0,
+  );
+
+  const successfulPrompts = arsenal.results
+    .filter((r) => r.successfulAttempts > 0)
+    .map((r) => ({
+      prompt: r.sampleSuccessfulPrompt,
+      responseSnippet: r.sampleResponse,
+      attackMethod: r.attackVector,
+      judgeVerdict: {
+        outcome: (r.sampleJudgeOutcome as any) || "leaked",
+        riskScore: r.sampleJudgeRisk || (r.vulnerabilityScore >= 50 ? 10 : 0),
+        reasoning: r.sampleJudgeReason || "Arsenal detection",
+      },
+    }));
+
+  const attackMethodBreakdown: Record<
+    string,
+    { successful: number; total: number }
+  > = {};
+  arsenal.results.forEach((r) => {
+    if (!attackMethodBreakdown[r.attackVector]) {
+      attackMethodBreakdown[r.attackVector] = { successful: 0, total: 0 };
+    }
+    attackMethodBreakdown[r.attackVector].successful += r.successfulAttempts;
+    attackMethodBreakdown[r.attackVector].total += r.totalAttempts;
+  });
+
+  return {
+    successRate: arsenal.summary.averageVulnerability,
+    attempts: totalAttempts,
+    successfulPrompts,
+    attackMethodBreakdown,
+    simulated: false,
+  };
+}
 
 export function EvaluationPanel() {
   const baselineAudit = useWorkflowStore((state) => state.baselineAudit);
   const hardenedAudit = useWorkflowStore((state) => state.hardenedAudit);
-  const baselineJailbreak = useWorkflowStore(
+  const rawBaselineJailbreak = useWorkflowStore(
     (state) => state.baselineJailbreak,
   );
-  const hardenedJailbreak = useWorkflowStore(
+  const rawHardenedJailbreak = useWorkflowStore(
     (state) => state.hardenedJailbreak,
+  );
+  const lastArsenalSummary = useWorkflowStore(
+    (state) => state.lastArsenalSummary,
+  );
+  const hardenedArsenalSummary = useWorkflowStore(
+    (state) => state.hardenedArsenalSummary,
   );
   const hardenedModelId = useWorkflowStore((state) => state.hardenedModelId);
   const lastAuditInput = useWorkflowStore((state) => state.lastAuditInput);
-  const lastJailbreakInput = useWorkflowStore((state) => state.lastJailbreakInput);
+  const lastJailbreakInput = useWorkflowStore(
+    (state) => state.lastJailbreakInput,
+  );
+
+  const baselineJailbreak =
+    rawBaselineJailbreak || adaptArsenalToJailbreak(lastArsenalSummary);
+  const hardenedJailbreak =
+    rawHardenedJailbreak || adaptArsenalToJailbreak(hardenedArsenalSummary);
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 

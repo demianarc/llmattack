@@ -16,6 +16,8 @@ import {
   AuditResult,
   FineTuneResult,
   JailbreakResult,
+  RedTeamArsenalConfig,
+  RedTeamArsenalResult,
 } from "@/types/pipeline";
 import { useEffect } from "react";
 import {
@@ -52,11 +54,17 @@ export function FineTuneCard() {
   const lastJailbreakInput = useWorkflowStore(
     (state) => state.lastJailbreakInput,
   );
+  const lastArsenalConfig = useWorkflowStore(
+    (state) => state.lastArsenalConfig,
+  );
   const recordAuditResult = useWorkflowStore(
     (state) => state.recordAuditResult,
   );
   const recordJailbreakResult = useWorkflowStore(
     (state) => state.recordJailbreakResult,
+  );
+  const setHardenedArsenalSummary = useWorkflowStore(
+    (state) => state.setHardenedArsenalSummary,
   );
 
   const defaultFineTuneModel = isFineTunableModel(modelId)
@@ -147,8 +155,8 @@ export function FineTuneCard() {
         throw new Error("No hardened model detected yet.");
       }
       const hardenedModel = fineTuneJob.fineTunedModel;
-      if (!lastAuditInput && !lastJailbreakInput) {
-        throw new Error("Run baseline audit + jailbreak first.");
+      if (!lastAuditInput && !lastJailbreakInput && !lastArsenalConfig) {
+        throw new Error("Run baseline audit + jailbreak (or Red Team Arsenal) first.");
       }
 
       if (lastAuditInput) {
@@ -169,6 +177,16 @@ export function FineTuneCard() {
           body: { ...lastJailbreakInput, modelId: hardenedModel },
         });
         recordJailbreakResult("hardened", jailbreakResult);
+      }
+
+      if (lastArsenalConfig) {
+        const arsenalResult = await postJson<
+          RedTeamArsenalConfig,
+          RedTeamArsenalResult
+        >("/api/pipeline/red-team-arsenal", {
+          body: { ...lastArsenalConfig, models: [hardenedModel] },
+        });
+        setHardenedArsenalSummary(arsenalResult);
       }
     },
   });
@@ -307,18 +325,18 @@ export function FineTuneCard() {
               onClick={() => evaluationMutation.mutate()}
               disabled={
                 evaluationMutation.isPending ||
-                (!lastAuditInput && !lastJailbreakInput)
+                (!lastAuditInput && !lastJailbreakInput && !lastArsenalConfig)
               }
               className="rounded-2xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-600/30 transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {evaluationMutation.isPending
                 ? "Re-running evaluations..."
-                : "Re-run audit & jailbreak"}
+                : "Re-run audit & jailbreak / arsenal"}
             </button>
           </div>
-          {!lastAuditInput && !lastJailbreakInput && (
+          {!lastAuditInput && !lastJailbreakInput && !lastArsenalConfig && (
             <p className="text-xs text-amber-600">
-              Run at least one baseline audit + jailbreak before benchmarking.
+              Run at least one baseline audit + jailbreak (or Red Team Arsenal) before benchmarking.
             </p>
           )}
           {evaluationMessage && (

@@ -33,6 +33,7 @@ type WorkflowState = {
   lastAuditInput?: AuditInput;
   lastJailbreakInput?: JailbreakInput;
   lastArsenalSummary?: RedTeamArsenalResult | null;
+  hardenedArsenalSummary?: RedTeamArsenalResult | null;
   lastArsenalConfig?: RedTeamArsenalConfig | null;
 };
 
@@ -54,6 +55,7 @@ type WorkflowActions = {
   setLastAuditInput: (input: AuditInput) => void;
   setLastJailbreakInput: (input: JailbreakInput) => void;
   setLastArsenalSummary: (summary: RedTeamArsenalResult | null) => void;
+  setHardenedArsenalSummary: (summary: RedTeamArsenalResult | null) => void;
   setLastArsenalConfig: (config: RedTeamArsenalConfig | null) => void;
   resetAutomation: () => void;
 };
@@ -92,6 +94,8 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
     setLastAuditInput: (lastAuditInput) => set({ lastAuditInput }),
     setLastJailbreakInput: (lastJailbreakInput) => set({ lastJailbreakInput }),
     setLastArsenalSummary: (lastArsenalSummary) => set({ lastArsenalSummary }),
+    setHardenedArsenalSummary: (hardenedArsenalSummary) =>
+      set({ hardenedArsenalSummary }),
     setLastArsenalConfig: (lastArsenalConfig) => set({ lastArsenalConfig }),
     resetAutomation: () =>
       set({
@@ -109,6 +113,7 @@ export const useWorkflowStore = create<WorkflowState & WorkflowActions>(
         deployedModelStatus: undefined,
         lastCheckpointId: undefined,
         lastArsenalSummary: undefined,
+        hardenedArsenalSummary: undefined,
         lastArsenalConfig: undefined,
       }),
   }),
