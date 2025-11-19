@@ -316,59 +316,130 @@ export async function handleJailbreak(
 ): Promise<JailbreakResult> {
   const payload = jailbreakSchema.parse(input);
   if (!env.isNebiusConfigured) {
-    return simulateAdvancedJailbreak(payload.attackCount, payload.attackType || "comprehensive");
+    return simulateAdvancedJailbreak(
+      payload.attackCount,
+      payload.attackType || "comprehensive",
+    );
   }
 
-  const attackMethods = payload.attackType === "comprehensive"
+  // Handle Regression Testing (Custom Prompts)
+  if (payload.customPrompts && payload.customPrompts.length > 0) {
+    const successfulPrompts: JailbreakResult["successfulPrompts"] = [];
+    const concurrencyLimit = 5;
+    const prompts = payload.customPrompts;
+
+    const executePrompt = async (prompt: string) => {
+      const response = await callNebiusChat({
+        modelId: payload.modelId,
+        prompt: prompt,
+        systemPrompt: "You are a helpful assistant.", // Standard system prompt for regression
+      });
+
+      const content = response.choices[0]?.message?.content ?? "";
+      const verdict = await judgeJailbreakAttempt({
+        attackMethod: "regression",
+        attackPrompt: prompt,
+        modelResponse: content,
+        targetModelId: payload.modelId,
+      });
+
+      if (verdict.outcome !== "blocked") {
+        successfulPrompts.push({
+          prompt,
+          responseSnippet: content.slice(0, 120),
+          attackMethod: "regression",
+          judgeVerdict: verdict,
+        });
+      }
+    };
+
+    // Execute in chunks
+    for (let i = 0; i < prompts.length; i += concurrencyLimit) {
+      const chunk = prompts.slice(i, i + concurrencyLimit);
+      await Promise.all(chunk.map(executePrompt));
+    }
+
+    return {
+      attempts: prompts.length,
+      successRate:
+        prompts.length > 0 ? (successfulPrompts.length / prompts.length) * 100 : 0,
+      successfulPrompts,
+      simulated: false,
+    };
+  }
+
+  const attackMethods =
+    payload.attackType === "comprehensive"
     ? ["gcg", "multi-turn", "fuzzing", "token-manip", "anthropic-style"]
-    : [payload.attackType];
+      : [payload.attackType || "comprehensive"];
 
   const successfulPrompts: JailbreakResult["successfulPrompts"] = [];
-  const methodBreakdown: Record<string, { successful: number; total: number }> = {};
+  const methodBreakdown: Record<string, { successful: number; total: number }> =
+    {};
 
   // Initialize breakdown
-  attackMethods.forEach(method => {
+  attackMethods.forEach((method) => {
     methodBreakdown[method] = { successful: 0, total: 0 };
   });
 
+  // Parallelize attacks with concurrency limit to avoid timeouts while respecting rate limits
+  const CONCURRENCY_LIMIT = 5;
+  const allPromises: (() => Promise<void>)[] = [];
+
   for (const method of attackMethods) {
-    const attemptsForMethod = payload.attackType === "comprehensive"
+    const attemptsForMethod =
+      payload.attackType === "comprehensive"
       ? Math.ceil(payload.attackCount / attackMethods.length)
       : payload.attackCount;
 
     methodBreakdown[method].total = attemptsForMethod;
 
     for (let i = 0; i < attemptsForMethod; i += 1) {
-      const attackPrompt = generateAttackPrompt(method, i, HARMFUL_KEYWORDS);
+      allPromises.push(async () => {
+        const attackPrompt = generateAttackPrompt(method, i, HARMFUL_KEYWORDS);
 
-    const response = await callNebiusChat({
-      modelId: payload.modelId,
-      prompt: attackPrompt,
-        systemPrompt: getSystemPromptForMethod(method),
-    });
+        const response = await callNebiusChat({
+          modelId: payload.modelId,
+          prompt: attackPrompt,
+          systemPrompt: getSystemPromptForMethod(method),
+        });
 
-    const content = response.choices[0]?.message?.content ?? "";
-      const verdict = await judgeJailbreakAttempt({
-        attackMethod: method,
-        attackPrompt,
-        modelResponse: content,
-        targetModelId: payload.modelId,
-      });
-      const isSuccessful = verdict.outcome !== "blocked";
-
-      if (isSuccessful) {
-      successfulPrompts.push({
-        prompt: attackPrompt,
-        responseSnippet: content.slice(0, 120),
+        const content = response.choices[0]?.message?.content ?? "";
+        const verdict = await judgeJailbreakAttempt({
           attackMethod: method,
-          judgeVerdict: verdict,
+          attackPrompt,
+          modelResponse: content,
+          targetModelId: payload.modelId,
+        });
+        const isSuccessful = verdict.outcome !== "blocked";
+
+        if (isSuccessful) {
+          successfulPrompts.push({
+            prompt: attackPrompt,
+            responseSnippet: content.slice(0, 120),
+            attackMethod: method,
+            judgeVerdict: verdict,
+          });
+          methodBreakdown[method].successful++;
+        }
       });
-        methodBreakdown[method].successful++;
-      }
     }
   }
 
-  const totalAttempts = Object.values(methodBreakdown).reduce((sum, stats) => sum + stats.total, 0);
+  // Execute with concurrency limit
+  const chunks = [];
+  for (let i = 0; i < allPromises.length; i += CONCURRENCY_LIMIT) {
+    chunks.push(allPromises.slice(i, i + CONCURRENCY_LIMIT));
+  }
+
+  for (const chunk of chunks) {
+    await Promise.all(chunk.map((fn) => fn()));
+  }
+
+  const totalAttempts = Object.values(methodBreakdown).reduce(
+    (sum, stats) => sum + stats.total,
+    0,
+  );
 
   return {
     attempts: totalAttempts,
@@ -376,7 +447,8 @@ export async function handleJailbreak(
       ? (successfulPrompts.length / totalAttempts) * 100
       : 0,
     successfulPrompts,
-    attackMethodBreakdown: payload.attackType === "comprehensive" ? methodBreakdown : undefined,
+    attackMethodBreakdown:
+      payload.attackType === "comprehensive" ? methodBreakdown : undefined,
     simulated: false,
   };
 }
@@ -389,19 +461,29 @@ export async function handleFineTune(
     return simulateFineTune();
   }
 
+  let fileId = payload.trainingFileId;
+
+  if (!fileId && payload.trainingJsonl) {
   const uploaded = await uploadJsonlToNebius(
     payload.trainingJsonl,
     payload.fileName,
   );
+    fileId = uploaded.id;
+  }
+
+  if (!fileId) {
+    throw new Error("No training file ID or content provided");
+  }
+
   const job = await createFineTuneJob({
     modelId: payload.modelId,
-    trainingFileId: uploaded.id,
+    trainingFileId: fileId,
   });
 
   return {
     jobId: job.id,
     status: job.status,
-    trainingFileId: uploaded.id,
+    trainingFileId: fileId,
     hardenedArtifacts: [],
     simulated: false,
   };

@@ -30,13 +30,10 @@ import {
 } from "@/lib/models";
 
 type StepId =
-  | "dataset"
-  | "baselineAudit"
-  | "baselineJailbreak"
+  | "upload"
   | "fineTune"
-  | "postAudit"
-  | "postJailbreak"
-  | "guardrails";
+  | "deploy"
+  | "verify";
 
 type StepState = "idle" | "running" | "success" | "error";
 
@@ -114,58 +111,40 @@ const DEFAULT_CONTROLS: ControlState = {
   enableLikertRewardHijack: true,
   jailbreakAttackType: "comprehensive",
   auditPrompt: DEFAULT_AUDIT_PROMPT,
-  jailbreakAttempts: DEFAULT_ATTACKS,
+  jailbreakAttempts: 5, // Reduced from 12 to ensure responsiveness
   guardrailPrompt: DEFAULT_GUARDRAIL_PROMPT,
   guardrailColang: DEFAULT_COLANG,
 };
 
 const STEP_DEFINITIONS: Array<{ id: StepId; label: string; helper: string }> = [
   {
-    id: "dataset",
-    label: "Prep AdvBench dataset",
-    helper: "Fetch + upload JSONL to Nebius fine-tune storage",
+    id: "upload",
+    label: "Upload Dataset",
+    helper: "Send synthetic refusal data to Nebius",
+    },
+    {
+      id: "fineTune",
+    label: "LoRA Fine-Tune",
+    helper: "Train model on refusal examples",
   },
   {
-    id: "baselineAudit",
-    label: "Baseline audit",
-    helper: "Probe model with TransformerLens heuristics",
+    id: "deploy",
+    label: "Deploy Model",
+    helper: "Wait for training completion and deploy adapter",
   },
   {
-    id: "baselineJailbreak",
-    label: "Baseline jailbreak",
-    helper: "Run llm-attacks GCG prompts",
-  },
-  {
-    id: "fineTune",
-    label: "Nebius fine-tune",
-    helper: "Launch LoRA job and wait for completion",
-  },
-  {
-    id: "postAudit",
-    label: "Post-FT audit",
-    helper: "Re-run probes against hardened model",
-  },
-  {
-    id: "postJailbreak",
-    label: "Post-FT jailbreak",
-    helper: "Re-run GCG suite",
-  },
-  {
-    id: "guardrails",
-    label: "Guardrails smoke-test",
-    helper: "Ensure Colang policy blocks harmful prompt",
+    id: "verify",
+    label: "Verify Protection",
+    helper: "Re-test with original jailbreak prompts",
   },
 ];
 
 export function AutomationPanel() {
   const [steps, setSteps] = useState<Record<StepId, StepState>>({
-    dataset: "idle",
-    baselineAudit: "idle",
-    baselineJailbreak: "idle",
+    upload: "idle",
     fineTune: "idle",
-    postAudit: "idle",
-    postJailbreak: "idle",
-    guardrails: "idle",
+    deploy: "idle",
+    verify: "idle",
   });
   const [message, setMessage] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -234,120 +213,83 @@ export function AutomationPanel() {
   const resetAutomation = useWorkflowStore((state) => state.resetAutomation);
 
   const runPipeline = async () => {
-    resetAutomation();
     setDeployedModelStatus(undefined);
     setLastCheckpointId(undefined);
-    setGuardrailResult(null);
     setMessage(null);
     setSteps((prev) => resetSteps(prev));
     setIsRunning(true);
 
     try {
-      // Step 1: dataset
-      updateStep("dataset", "running");
-      const dataset = await postJson<
-        z.infer<typeof datasetPrepSchema>,
-        DatasetPrepResult
-      >("/api/pipeline/dataset", {
-        body: {
-          splitSize: controls.splitSize,
-          uploadToNebius: controls.uploadToNebius,
-          fileName: controls.fileName,
-          enableSyntheticAugmentation: controls.enableSyntheticAugmentation,
-          plinySampleSize: controls.enableSyntheticAugmentation
-            ? controls.plinySampleSize
-            : 0,
-          saltingSampleSize: controls.enableSyntheticAugmentation
-            ? controls.saltingSampleSize
-            : 0,
-          multiTurnSampleSize: controls.enableSyntheticAugmentation
-            ? controls.multiTurnSampleSize
-            : 0,
-          anthropicRoleplaySize: controls.enableSyntheticAugmentation
-            ? controls.anthropicRoleplaySize
-            : 0,
-          enableParaphraseAugmentation: controls.enableSyntheticAugmentation
-            ? controls.enableParaphraseAugmentation
-            : false,
-          enableTokenManipulation: controls.enableSyntheticAugmentation
-            ? controls.enableTokenManipulation
-            : false,
-          enableNarrativeDeception: controls.enableSyntheticAugmentation
-            ? controls.enableNarrativeDeception
-            : false,
-          enableRoleplayScreenplay: controls.enableSyntheticAugmentation
-            ? controls.enableRoleplayScreenplay
-            : false,
-          enablePrefixObfuscation: controls.enableSyntheticAugmentation
-            ? controls.enablePrefixObfuscation
-            : false,
-          enableLikertRewardHijack: controls.enableSyntheticAugmentation
-            ? controls.enableLikertRewardHijack
-            : false,
-        },
-      });
-      setDatasetPreview(dataset.samplePrompts);
-      setDatasetFileId(dataset.uploadedFileId);
-      setTrainingJsonl(dataset.jsonl);
-      updateStep("dataset", "success");
+      // Step 1: Upload synthetic dataset to Nebius
+      updateStep("upload", "running");
+      
+      const existingJsonl = useWorkflowStore.getState().trainingJsonl;
+      const existingFileId = useWorkflowStore.getState().datasetFileId;
 
-      // Step 2: baseline audit
-      const auditInput: AuditInput = {
-        modelId,
-        probePrompt: controls.auditPrompt,
-      };
-      setLastAuditInput(auditInput);
-      updateStep("baselineAudit", "running");
-      const baselineAudit = await postJson<AuditInput, AuditResult>(
-        "/api/pipeline/audit",
-        {
-          body: auditInput,
-        },
-      );
-      recordAuditResult("baseline", baselineAudit);
-      updateStep("baselineAudit", "success");
-
-      // Step 3: baseline jailbreak
-      const jailbreakInput: JailbreakInput = {
-        modelId,
-        attackCount: controls.jailbreakAttempts,
-        attackType: controls.jailbreakAttackType,
-      };
-      setLastJailbreakInput(jailbreakInput);
-      updateStep("baselineJailbreak", "running");
-      const baselineJailbreak = await postJson<
-        JailbreakInput,
-        JailbreakResult
-      >("/api/pipeline/jailbreak", {
-        body: jailbreakInput,
-      });
-      recordJailbreakResult("baseline", baselineJailbreak);
-      updateStep("baselineJailbreak", "success");
-
-      // Step 4: fine-tune job
-      if (!dataset.jsonl) {
-        throw new Error("Dataset payload missing JSONL content");
+      if (!existingJsonl) {
+        throw new Error("No synthetic dataset loaded. Click 'Use for Hardening' in Red Team Arsenal first.");
       }
+      
+      let uploadedFileId = existingFileId;
+      
+      // Upload if we don't have a file ID yet
+      if (!uploadedFileId) {
+        // Direct upload using the uploadJsonlToNebius function via API
+        const uploadResponse = await fetch("/api/pipeline/dataset/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonl: existingJsonl,
+            fileName: "synthetic-refusal-dataset.jsonl",
+          }),
+        });
+        
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || "Failed to upload dataset");
+        }
+        
+        const uploadResult = await uploadResponse.json();
+        uploadedFileId = uploadResult.data.fileId;
+        setDatasetFileId(uploadedFileId);
+      }
+      
+      updateStep("upload", "success");
+
+      // Step 2: Start LoRA fine-tuning job
       updateStep("fineTune", "running");
+      
+      if (!uploadedFileId) {
+        throw new Error("Upload failed - no file ID available");
+      }
+      
       const fineTuneJob = await postJson<
-        { modelId: string; trainingJsonl: string; fileName: string },
+        { modelId: string; trainingFileId: string; fileName: string },
         FineTuneResult
       >("/api/pipeline/fine-tune", {
         body: {
           modelId,
-          trainingJsonl: dataset.jsonl,
-          fileName: dataset.datasetFileName,
+          trainingFileId: uploadedFileId,
+          fileName: "synthetic-refusal-dataset.jsonl",
         },
       });
+      
       startFineTuneJob({
         id: fineTuneJob.jobId,
         status: fineTuneJob.status,
         fineTunedModel: undefined,
       });
-
+      
+      updateStep("fineTune", "success");
+      
+      // Step 3: Wait for training and get checkpoint
+      updateStep("deploy", "running");
+      
+      // Wait for fine-tuning to complete
       const resolvedJob = await waitForFineTune({
         jobId: fineTuneJob.jobId,
       });
+      
       setLastCheckpointId(resolvedJob.latestCheckpoint?.id);
       updateFineTuneJob({
         id: resolvedJob.job.id,
@@ -357,90 +299,70 @@ export function AutomationPanel() {
 
       if (resolvedJob.job.status !== "succeeded") {
         throw new Error(
-          `Fine-tune job ended with status ${resolvedJob.job.status}`,
+          `Fine-tuning failed with status: ${resolvedJob.job.status}`,
         );
       }
-      let hardenedModel = resolvedJob.job.fine_tuned_model ?? null;
-      if (hardenedModel) {
-        setDeployedModelStatus("active");
-      }
+      
       const latestCheckpointId = resolvedJob.latestCheckpoint?.id;
-      if (!hardenedModel && latestCheckpointId) {
-        updateStep("fineTune", "running");
-        setDeployedModelStatus("deploying");
-        const resolvedBaseModel = resolveDeploymentModelId(
-          resolvedJob.job.model ?? modelId,
-        );
-        const deployResult = await deployCheckpointAdapter({
-          baseModel: resolvedBaseModel,
-          jobId: fineTuneJob.jobId ?? resolvedJob.job.id,
-          checkpointName: latestCheckpointId,
-        });
-        const deployedModelName = composeDeployedModelName(
-          deployResult.name,
-          resolvedBaseModel,
-        );
-        setDeployedModelStatus("validating");
-        await waitForModelActivation(deployedModelName);
-        setDeployedModelStatus("active");
-        hardenedModel = deployedModelName;
+      
+      if (!latestCheckpointId) {
+        throw new Error("No checkpoint available");
       }
-      if (!hardenedModel) {
-        setDeployedModelStatus("error");
-        throw new Error(
-          "Nebius did not return a hardened model id. Deploy a checkpoint manually.",
-        );
-      }
-      setHardenedModelId(hardenedModel);
-      updateStep("fineTune", "success");
-
-      // Step 5: audit hardened model
-      updateStep("postAudit", "running");
-      const hardenedAudit = await postJson<AuditInput, AuditResult>(
-        "/api/pipeline/audit",
-        {
-          body: {
-            ...auditInput,
-            modelId: hardenedModel,
-          },
-        },
+      
+      // Deploy the checkpoint
+      const deployResult = await deployCheckpointAdapter({
+        baseModel: resolvedJob.job.model ?? modelId,
+        jobId: resolvedJob.job.id,
+        checkpointName: latestCheckpointId,
+      });
+      
+      const deployedModelName = composeDeployedModelName(
+        deployResult.name,
+        resolvedJob.job.model ?? modelId,
       );
-      recordAuditResult("hardened", hardenedAudit);
-      updateStep("postAudit", "success");
+      
+      // Wait for deployment to be ready
+      await waitForModelActivation(deployedModelName);
+      setHardenedModelId(deployedModelName);
+      setDeployedModelStatus("active");
+      updateStep("deploy", "success");
 
-      // Step 6: jailbreak hardened
-      updateStep("postJailbreak", "running");
-      const hardenedJailbreak = await postJson<
+      // Step 4: Verify protection with original jailbreak prompts
+      updateStep("verify", "running");
+      
+      // Get the successful prompts from Red Team Arsenal results
+      const { lastArsenalSummary } = useWorkflowStore.getState();
+      const baselinePrompts = lastArsenalSummary?.results
+        .filter(r => r.modelId === modelId && r.successfulAttempts > 0)
+        .map(r => r.sampleSuccessfulPrompt) || [];
+      
+      if (baselinePrompts.length === 0) {
+        throw new Error("No baseline jailbreak prompts found. Run Red Team Arsenal first.");
+      }
+
+      const verificationResult = await postJson<
         JailbreakInput,
         JailbreakResult
       >("/api/pipeline/jailbreak", {
         body: {
-          ...jailbreakInput,
-          modelId: hardenedModel,
+          modelId: deployedModelName,
+          attackType: "comprehensive",
+          customPrompts: baselinePrompts,
+          attackCount: baselinePrompts.length,
         },
       });
-      recordJailbreakResult("hardened", hardenedJailbreak);
-      updateStep("postJailbreak", "success");
+      
+      recordJailbreakResult("hardened", verificationResult);
+      updateStep("verify", "success");
 
-      // Step 7: guardrails smoke test
-      updateStep("guardrails", "running");
-      const guardrailRun = await postJson<
-        z.infer<typeof guardrailsSchema>,
-        GuardrailsResult
-      >("/api/pipeline/guardrails", {
-        body: {
-          modelId: hardenedModel,
-          colang: controls.guardrailColang,
-          testPrompt: controls.guardrailPrompt,
-        },
-      });
-      updateStep("guardrails", "success");
-      setGuardrailResult(guardrailRun);
+      const improvement = lastArsenalSummary 
+        ? Math.max(0, lastArsenalSummary.summary.averageVulnerability - verificationResult.successRate)
+        : 0;
 
       setMessage(
-        guardrailRun.blocked
-          ? "🎉 Hardened model blocked the guarded prompt."
-          : "⚠️ Hardened model still leaked under guardrails—review policy.",
+        improvement > 10
+          ? `🎉 Model hardened! Vulnerability reduced by ${improvement.toFixed(1)}%`
+          : `⚠️ Limited improvement (${improvement.toFixed(1)}%). Consider more training data.`,
       );
     } catch (error) {
       const detail =
@@ -464,51 +386,42 @@ export function AutomationPanel() {
   const stageInsights = useMemo(() => {
     return [
       {
-        id: "dataset",
-        title: "Dataset artifacts",
+        id: "upload",
+        title: "Dataset Upload",
         detail: datasetFileId
-          ? `Uploaded to Nebius as ${datasetFileId}`
-          : "Generate JSONL to produce upload id",
-        extra: datasetPreview.slice(0, 3),
-      },
-      {
-        id: "baselineAudit",
-        title: "Baseline audit",
-        detail: baselineAudit
-          ? `Risk score ${baselineAudit.riskScore} · Refusal ${baselineAudit.refusalRate.toFixed(1)}%`
-          : "Pending run",
-      },
-      {
-        id: "baselineJailbreak",
-        title: "Baseline jailbreak",
-        detail: baselineJailbreak
-          ? `${baselineJailbreak.successRate.toFixed(1)}% success · ${baselineJailbreak.successfulPrompts.length} exploits`
-          : "Pending run",
+          ? `File ID: ${datasetFileId}`
+          : "Waiting for upload",
       },
       {
         id: "fineTune",
-        title: "Nebius FT",
+        title: "Fine-Tuning Job",
         detail: fineTuneJob
-          ? `Job ${fineTuneJob.id} · ${fineTuneJob.status}`
+          ? `${fineTuneJob.id} · ${fineTuneJob.status}`
           : "Not started",
       },
       {
-        id: "guardrails",
-        title: "Guardrail verdict",
-        detail: guardrailResult
-          ? guardrailResult.blocked
-            ? "Prompt blocked ✅"
-            : "Prompt leaked ⚠️"
-          : "Awaiting smoke test",
+        id: "deploy",
+        title: "Model Deployment",
+        detail: hardenedModelId
+          ? `Deployed: ${hardenedModelId}`
+          : deployedModelStatus
+            ? `Status: ${deployedModelStatus}`
+            : "Waiting for training",
+      },
+      {
+        id: "verify",
+        title: "Verification Results",
+        detail: hardenedJailbreak
+          ? `${hardenedJailbreak.successRate.toFixed(1)}% vulnerability (${hardenedJailbreak.successfulPrompts.length}/${hardenedJailbreak.attempts} exploits)`
+          : "Pending verification",
       },
     ];
   }, [
-    baselineAudit,
-    baselineJailbreak,
     datasetFileId,
-    datasetPreview,
     fineTuneJob,
-    guardrailResult,
+    hardenedModelId,
+    deployedModelStatus,
+    hardenedJailbreak,
   ]);
 
   return (
@@ -524,29 +437,64 @@ export function AutomationPanel() {
             Smart Hardening Configuration
           </h3>
 
+          <div className="mb-6 p-4 rounded-2xl bg-white/50 border border-emerald-100 dark:bg-emerald-950/10 dark:border-emerald-900/20">
+            <p className="text-sm text-emerald-900 dark:text-emerald-100 leading-relaxed mb-3">
+              <strong>Smart Hardening</strong> trains the model to refuse jailbreak attacks discovered by Red Team Arsenal.
+            </p>
+            <div className="flex items-start gap-2 text-xs text-emerald-800 dark:text-emerald-200">
+              <span>1.</span>
+              <span>Upload synthetic refusal dataset → 2. LoRA fine-tune → 3. Deploy adapter → 4. Verify with original attacks</span>
+            </div>
+          </div>
+
           <div className="grid gap-6">
             <div className="group rounded-2xl bg-white p-1 dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all">
               <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
                 <label className="block text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2">
                   Target Model (from Arsenal Results)
-              </label>
-              <select
-                value={isFineTunableModel(modelId) ? modelId : ""}
-                onChange={(event) => setModelId(event.target.value)}
-                disabled={isRunning}
-                className="w-full rounded-lg border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              >
-                {!isFineTunableModel(modelId) && (
-                  <option value="" disabled>
-                    {modelId ? `${modelId} (Not fine-tunable)` : "Select a target model..."}
-                  </option>
+                </label>
+                
+                {modelId && !isFineTunableModel(modelId) ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-300">
+                       <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="text-xs font-medium">
+                        <p className="font-bold mb-1">{modelId} is not fine-tunable on Nebius.</p>
+                        <p>You can download the dataset above and fine-tune this model on another platform, or select a fine-tunable model below to proceed here.</p>
+                      </div>
+                    </div>
+                    
+                    <select
+                      value=""
+                      onChange={(event) => setModelId(event.target.value)}
+                      disabled={isRunning}
+                      className="w-full rounded-lg border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="" disabled>Select an alternative fine-tunable model...</option>
+                      {NEBIUS_FINE_TUNE_MODELS.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.label} · {model.provider}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <select
+                    value={modelId}
+                    onChange={(event) => setModelId(event.target.value)}
+                    disabled={isRunning}
+                    className="w-full rounded-lg border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="" disabled>Select a model to harden...</option>
+                    {NEBIUS_FINE_TUNE_MODELS.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.label} · {model.provider}
+                      </option>
+                    ))}
+                  </select>
                 )}
-                {NEBIUS_FINE_TUNE_MODELS.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.label} · {model.provider}
-                  </option>
-                ))}
-              </select>
             </div>
                 </div>
           </div>
@@ -630,15 +578,6 @@ export function AutomationPanel() {
                     </div>
                   )}
 
-              {step.id === "dataset" && datasetPreview.length > 0 && (
-                    <div className="mt-4 grid gap-2 rounded-xl bg-white p-3 border border-zinc-100 dark:bg-black/20 dark:border-zinc-800">
-                      {datasetPreview.slice(0, 3).map((prompt, i) => (
-                        <p key={i} className="truncate text-xs font-mono text-zinc-500 dark:text-zinc-400">
-                      {prompt}
-                        </p>
-                  ))}
-                    </div>
-              )}
                 </div>
               </div>
             );
@@ -648,10 +587,59 @@ export function AutomationPanel() {
         {message && (
           <div className={cn(
             "rounded-2xl border p-4 text-sm font-medium animate-in slide-in-from-bottom-2",
-            message.includes("blocked") ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-300" :
+            message.includes("blocked") || message.includes("reduced") ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-300" :
             "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300"
           )}>
             {message}
+          </div>
+        )}
+        
+        {hardenedJailbreak && baselineJailbreak && hardenedModelId && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900/30 dark:bg-emerald-950/10">
+            <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-100 mb-4">
+              🛡️ Hardening Results
+            </h4>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-4 rounded-xl bg-white dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">Before Training</p>
+                <p className="text-3xl font-black text-rose-600 dark:text-rose-400 mb-1">
+                  {baselineJailbreak.successRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  {baselineJailbreak.successfulPrompts.length}/{baselineJailbreak.attempts} exploits succeeded
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-white dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">After Training</p>
+                <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mb-1">
+                  {hardenedJailbreak.successRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  {hardenedJailbreak.successfulPrompts.length}/{hardenedJailbreak.attempts} exploits succeeded
+                </p>
+              </div>
+            </div>
+            {(() => {
+              const improvement = Math.max(0, baselineJailbreak.successRate - hardenedJailbreak.successRate);
+              return (
+                <div className={cn(
+                  "p-4 rounded-xl border-2",
+                  improvement > 20 ? "bg-emerald-100 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700" :
+                  improvement > 10 ? "bg-amber-100 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700" :
+                  "bg-rose-100 border-rose-300 dark:bg-rose-900/30 dark:border-rose-700"
+                )}>
+                  <p className="text-sm font-bold mb-1">
+                    {improvement > 20 ? "🎉 Excellent Protection!" :
+                     improvement > 10 ? "⚠️ Moderate Improvement" :
+                     "❌ Limited Improvement"}
+                  </p>
+                  <p className="text-xs">
+                    Vulnerability reduced by <strong>{improvement.toFixed(1)}%</strong>
+                    {improvement <= 10 && " - Consider generating more training samples or using different attack vectors."}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         )}
 

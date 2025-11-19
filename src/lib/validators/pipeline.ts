@@ -30,12 +30,17 @@ export const jailbreakSchema = z.object({
   modelId: z.string().min(3),
   attackCount: z.number().min(5).max(50).default(15),
   attackType: z.enum(["gcg", "multi-turn", "fuzzing", "token-manip", "anthropic-style", "comprehensive"]).optional().default("comprehensive"),
+  customPrompts: z.array(z.string()).optional(),
 });
 
 export const fineTuneSchema = z.object({
   modelId: z.enum(NEBIUS_FINE_TUNE_MODEL_IDS),
-  trainingJsonl: z.string().min(10, "JSONL payload is required"),
+  trainingJsonl: z.string().min(10, "JSONL payload is required").optional(),
+  trainingFileId: z.string().optional(),
   fileName: z.string().min(3).max(80).default("advbench_train.jsonl"),
+}).refine((data) => data.trainingJsonl || data.trainingFileId, {
+  message: "Either trainingJsonl or trainingFileId must be provided",
+  path: ["trainingJsonl"],
 });
 
 export const guardrailsSchema = z.object({

@@ -85,6 +85,7 @@ export async function callNebiusChat({
 }
 
 function getNebiusHost() {
+  // Remove /v1/ suffix to get base host
   return env.nebiusBaseUrl.replace(/\/v1\/?$/, "");
 }
 
@@ -94,21 +95,13 @@ type FineTunePayload = {
 };
 
 const FINE_TUNE_MODEL_ALIASES: Record<string, string> = {
-  "meta-llama/Meta-Llama-3.1-8B-Instruct": "meta-llama/Llama-3.1-8B-Instruct",
-  "meta-llama/Meta-Llama-3.1-70B": "meta-llama/Llama-3.1-70B",
-  "meta-llama/Meta-Llama-3.3-70B-Instruct":
-    "meta-llama/Llama-3.3-70B-Instruct",
-  "meta-llama/Meta-Llama-3.2-1B-Instruct":
-    "meta-llama/Llama-3.2-1B-Instruct",
-  "meta-llama/Meta-Llama-3.2-3B-Instruct":
-    "meta-llama/Llama-3.2-3B-Instruct",
+  // No aliases needed - use exact model IDs as provided by Nebius API
 };
 
 const DEPLOYMENT_MODEL_ALIASES: Record<string, string> = {
+  // Map models to their inference-supported variants
+  "meta-llama/Llama-3.3-70B-Instruct": "meta-llama/Llama-3.3-70B-Instruct-fast",
   "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-  "meta-llama/Llama-3.1-70B": "meta-llama/Meta-Llama-3.1-70B",
-  "meta-llama/Llama-3.3-70B-Instruct":
-    "meta-llama/Llama-3.3-70B-Instruct-fast",
 };
 
 export function resolveFineTuneModelId(modelId: string) {
@@ -127,25 +120,35 @@ export async function createFineTuneJob({
     throw new NebiusConfigError();
   }
 
-  const client = getNebiusClient();
+  // Use direct fetch to avoid OpenAI client type issues and ensure 
+  // strict adherence to Nebius API expectations
   try {
-    return await client.fineTuning.jobs.create({
+    const response = await fetch(`${getNebiusHost()}/v1/fine_tuning/jobs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.nebiusApiKey}`,
+      },
+      body: JSON.stringify({
       model: resolveFineTuneModelId(modelId),
       training_file: trainingFileId,
-      suffix: `advbench-${new Date().toISOString().split("T")[0]}`,
       hyperparameters: {
-        batch_size: 8,
-        n_epochs: 1,
-        warmup_ratio: 0.1,
-        weight_decay: 0.01,
-        lora: true,
-        lora_r: 16,
-        lora_alpha: 16,
-        lora_dropout: 0.05,
-        packing: true,
-        max_grad_norm: 1.0,
-      } as Record<string, unknown>,
+          n_epochs: 3, // Minimal config
+          batch_size: 4,
+          lora: true
+        },
+      }),
     });
+
+    if (!response.ok) {
+       const text = await response.text();
+       throw new Error(`${response.status} ${text}`);
+    }
+
+    const job = await response.json();
+    // Cast to expected type for consistency
+    return job as OpenAI.FineTuning.Job;
+
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown error";
     throw new PipelineActionError(

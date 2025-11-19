@@ -33,7 +33,7 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     label: "Llama 3.3 70B Instruct",
     provider: "Meta",
     description: "Latest flagship aligned model",
-    canFineTune: false,
+    canFineTune: true,
   },
   {
     id: "meta-llama/Llama-3.1-70B",
@@ -46,14 +46,14 @@ const MODEL_LIBRARY: readonly NebiusModel[] = [
     id: "meta-llama/Llama-3.1-8B-Instruct",
     label: "Llama 3.1 8B Instruct",
     provider: "Meta",
-    description: "High-throughput LoRA target",
+    description: "✓ Supports full LoRA training + deployment",
     canFineTune: true,
   },
   {
     id: "meta-llama/Meta-Llama-3.1-8B-Instruct",
-    label: "Llama 3.1 8B Instruct (Legacy)",
+    label: "Llama 3.1 8B Instruct (Inference)",
     provider: "Meta",
-    description: "High-throughput LoRA target",
+    description: "Inference-only variant",
     canFineTune: false,
   },
   {
