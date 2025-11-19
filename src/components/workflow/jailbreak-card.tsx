@@ -92,7 +92,7 @@ export function JailbreakCard() {
           <span className="font-medium">Attack attempts per method</span>
           <input
             type="number"
-            min={5}
+            min={1}
             max={50}
             {...form.register("attackCount", { valueAsNumber: true })}
             className="rounded-2xl border border-zinc-200 px-4 py-2 font-mono text-sm text-zinc-700 focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"

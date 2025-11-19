@@ -15,7 +15,7 @@ import { NEBIUS_TEXT_MODELS } from "@/lib/models";
 // Available Nebius text-to-text models
 const AVAILABLE_MODELS = NEBIUS_TEXT_MODELS.map((model) => model.id);
 
-// Attack vectors inspired by real-world cyber incidents
+  // Attack vectors inspired by real-world cyber incidents
 const ATTACK_VECTOR_DEFINITIONS = [
   {
     id: "anthropic-style",
@@ -279,7 +279,7 @@ const ATTACK_VECTOR_DEFINITIONS = [
   {
     id: "chaos-chain",
     name: "Chaos Chain (Reasoning Models)",
-    description: "Iterative de-obfuscation for reasoning models like o1 (96% ASR, 6.3x boost at length 3)",
+    description: "Iterative de-obfuscation loop (Best for reasoning models like o1/DeepSeek-R1)",
     difficulty: "legendary",
     examples: ["Caesar cipher chains", "Reverse word mapping", "Role-play nesting"]
   },
@@ -550,17 +550,27 @@ export function RedTeamArsenal() {
     if (!isRunning) {
       return;
     }
+    // Calculate interval to match estimated time roughly
+    // estimatedTime is in seconds. We want to reach ~90% by the time it finishes.
+    // Update every 1000ms
+    const intervalTime = 1000;
+    const totalSteps = (estimatedTime * 1000) / intervalTime;
+    const incrementPerStep = 90 / totalSteps; // Aim for 90% at estimated completion
+
+    // Ensure at least some movement if calculation is weird
+    const safeIncrement = Math.max(0.5, Math.min(incrementPerStep, 5));
+
     const interval = setInterval(() => {
       setProgressPercent((prev) => {
-        if (prev >= 85) {
+        // Cap at 95% so it doesn't finish prematurely
+        if (prev >= 95) {
           return prev;
         }
-        const bump = 4 + Math.random() * 5;
-        return Math.min(prev + bump, 85);
+        return Math.min(prev + safeIncrement, 95);
       });
-    }, 1400);
+    }, intervalTime);
     return () => clearInterval(interval);
-  }, [isRunning]);
+  }, [isRunning, estimatedTime]);
 
   useEffect(() => {
     if (isRunning) return;
