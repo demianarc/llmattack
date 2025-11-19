@@ -24,6 +24,11 @@ import type {
 } from "@/types/pipeline";
 import { cn } from "@/lib/utils";
 
+import {
+  NEBIUS_FINE_TUNE_MODELS,
+  isFineTunableModel,
+} from "@/lib/models";
+
 type StepId =
   | "dataset"
   | "baselineAudit"
@@ -170,6 +175,7 @@ export function AutomationPanel() {
     useState<GuardrailsResult | null>(null);
 
   const modelId = useWorkflowStore((state) => state.modelId);
+  const setModelId = useWorkflowStore((state) => state.setModelId);
   const datasetPreview = useWorkflowStore((state) => state.datasetPreview);
   const datasetFileId = useWorkflowStore((state) => state.datasetFileId);
   const setDatasetPreview = useWorkflowStore((state) => state.setDatasetPreview);
@@ -525,20 +531,21 @@ export function AutomationPanel() {
                   Target Model (from Arsenal Results)
               </label>
               <select
-                value={controls.auditPrompt}
-                onChange={(event) =>
-                  setControls((prev) => ({
-                    ...prev,
-                    auditPrompt: event.target.value,
-                  }))
-                }
+                value={isFineTunableModel(modelId) ? modelId : ""}
+                onChange={(event) => setModelId(event.target.value)}
                 disabled={isRunning}
-                  className="w-full rounded-lg border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                className="w-full rounded-lg border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 focus:border-emerald-500 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               >
-                <option value={DEFAULT_AUDIT_PROMPT}>Auto-select from Arsenal results</option>
-                <option value="moonshotai/Kimi-K2-Instruct">Kimi-K2-Instruct (20% vulnerable)</option>
-                  <option value="deepseek-ai/DeepSeek-V3-0324-fast">DeepSeek-V3 Fast (High priority)</option>
-                <option value="meta-llama/Llama-3.3-70B-Instruct">Llama-3.3-70B (Medium risk)</option>
+                {!isFineTunableModel(modelId) && (
+                  <option value="" disabled>
+                    {modelId ? `${modelId} (Not fine-tunable)` : "Select a target model..."}
+                  </option>
+                )}
+                {NEBIUS_FINE_TUNE_MODELS.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label} · {model.provider}
+                  </option>
+                ))}
               </select>
             </div>
                 </div>
