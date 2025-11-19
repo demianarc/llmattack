@@ -277,6 +277,19 @@ export async function getModelStatus(name: string) {
     };
   }
 
+  // Handle case where model status is 'not_found' from Nebius API
+  // This can happen immediately after deployment before it propagates
+  if (response.status === 400) {
+    const text = await response.text();
+    if (text.includes("not found") || text.includes("does not exist")) {
+        return {
+            name,
+            status: "not_found",
+            status_reason: "Model provisioning",
+        };
+    }
+  }
+
   if (!response.ok) {
     const text = await response.text();
     throw new PipelineActionError(
@@ -309,6 +322,45 @@ function delay(ms: number) {
 
 function composeDeploymentName(name: string, baseModel: string) {
   return name.includes("/") ? name : `${baseModel}-LoRa:${name}`;
+}
+
+export async function waitForModelAvailability(modelId: string, maxRetries = 30, delayMs = 10000) {
+  if (!env.nebiusApiKey) return;
+  
+  console.log(`Polling inference availability for ${modelId}...`);
+  const client = getNebiusClient();
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await client.chat.completions.create({
+        model: modelId,
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 1,
+      });
+      console.log(`Model ${modelId} is ready for inference.`);
+      return;
+    } catch (error: any) {
+      // Check for 404 or "not found" in message
+      const isNotFound = error?.status === 404 || 
+        (error?.status === 400 && error?.message?.toLowerCase().includes("found"));
+      
+      if (isNotFound) {
+        console.log(`Model ${modelId} not ready yet (Attempt ${i + 1}/${maxRetries}). Waiting...`);
+        await delay(delayMs);
+        continue;
+      }
+      
+      // If it's 500, we retry.
+      if (error?.status >= 500) {
+         console.log(`Model ${modelId} returned server error ${error.status}. Waiting...`);
+         await delay(delayMs);
+         continue;
+      }
+
+      throw error;
+    }
+  }
+  throw new PipelineActionError(`Model ${modelId} did not become available for inference after ${maxRetries * delayMs / 1000} seconds.`);
 }
 
 export async function createBatchJob(inputFileId: string) {

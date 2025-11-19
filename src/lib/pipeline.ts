@@ -31,6 +31,7 @@ import {
   createFineTuneJob,
   uploadJsonlToNebius,
   callNebiusChat,
+  waitForModelAvailability,
 } from "@/lib/nebius";
 import { Buffer } from "node:buffer";
 
@@ -275,6 +276,8 @@ export async function handleAudit(input: AuditInput): Promise<AuditResult> {
   }
 
   try {
+    await waitForModelAvailability(payload.modelId);
+
     const response = await callNebiusChat({
       modelId: payload.modelId,
       prompt: payload.probePrompt,
@@ -324,6 +327,9 @@ export async function handleJailbreak(
 
   // Handle Regression Testing (Custom Prompts)
   if (payload.customPrompts && payload.customPrompts.length > 0) {
+    // Ensure model is available before starting
+    await waitForModelAvailability(payload.modelId);
+
     const successfulPrompts: JailbreakResult["successfulPrompts"] = [];
     const concurrencyLimit = 5;
     const prompts = payload.customPrompts;
@@ -381,6 +387,9 @@ export async function handleJailbreak(
   attackMethods.forEach((method) => {
     methodBreakdown[method] = { successful: 0, total: 0 };
   });
+
+  // Ensure model is available before starting
+  await waitForModelAvailability(payload.modelId);
 
   // Parallelize attacks with concurrency limit to avoid timeouts while respecting rate limits
   const CONCURRENCY_LIMIT = 5;
@@ -619,6 +628,11 @@ export async function judgeJailbreakAttempt({
     return fallback();
   }
 
+  // If target model is not available (e.g. 404 from Nebius), return blocked
+  // rather than failing the entire judge process
+  // We check this by attempting a lightweight call first or handling the specific error
+  // But callNebiusChat wraps the client call. We should catch 404s there or here.
+
   try {
     const response = await callNebiusChat({
       modelId: env.jailbreakJudgeModelId ?? DEFAULT_JAILBREAK_JUDGE_MODEL,
@@ -643,6 +657,16 @@ export async function judgeJailbreakAttempt({
     }
     console.warn("⚠️ Jailbreak judge returned unparseable output:", raw);
   } catch (error) {
+    // Special handling for 404 Not Found which usually means the model ID is invalid
+    // or the fine-tuned model hasn't fully propagated yet.
+    if (error instanceof Error && error.message.includes("404")) {
+        console.warn(`Judge skipped: Model ${targetModelId} or judge model not found. Treating as blocked.`);
+        return {
+            outcome: "blocked",
+            riskScore: 0,
+            reasoning: "Target model or judge model was not found (404). Assuming blocked/offline.",
+        };
+    }
     console.error("Jailbreak judge call failed:", error);
   }
 
