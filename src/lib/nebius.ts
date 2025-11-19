@@ -147,7 +147,7 @@ export async function createFineTuneJob({
 
     const job = await response.json();
     // Cast to expected type for consistency
-    return job as OpenAI.FineTuning.Job;
+    return job as OpenAI.FineTuning.Jobs.FineTuningJob;
 
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Unknown error";
