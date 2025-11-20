@@ -163,27 +163,81 @@ export async function getFineTuneStatus(jobId: string) {
     throw new NebiusConfigError();
   }
 
-  const client = getNebiusClient();
+  // Use raw fetch instead of SDK to avoid strict type validation issues with Nebius responses
+  const fetchJob = async () => {
+    const response = await fetch(`${getNebiusHost()}/v1/fine_tuning/jobs/${jobId}`, {
+      headers: { Authorization: `Bearer ${env.nebiusApiKey}` },
+    });
+    if (!response.ok) {
+      throw new Error(`Job status fetch failed: ${response.status} ${await response.text()}`);
+    }
+    return response.json();
+  };
+
+  // Use raw fetch for checkpoints too
+  const fetchCheckpoints = async () => {
+    const response = await fetch(`${getNebiusHost()}/v1/fine_tuning/jobs/${jobId}/checkpoints?limit=50`, {
+      headers: { Authorization: `Bearer ${env.nebiusApiKey}` },
+    });
+    if (!response.ok) {
+      // If checkpoints endpoint fails (e.g. 404 or 500), return empty list rather than crashing
+      console.warn(`Checkpoints fetch failed: ${response.status}`);
+      return { data: [] };
+    }
+    return response.json();
+  };
+
   try {
-    const job = await client.fineTuning.jobs.retrieve(jobId);
-    const checkpoints =
-      await client.fineTuning.jobs.checkpoints.list(jobId, {
-        limit: 50,
-      });
+    // 1. Retrieve the job details with simple retries
+    let job;
+    let lastError;
+    
+    for (let i = 0; i < 3; i++) {
+      try {
+        job = await fetchJob();
+        break;
+      } catch (e) {
+        lastError = e;
+        if (i < 2) await delay(2000);
+      }
+    }
 
-    const latestCheckpoint = checkpoints.data
+    if (!job) throw lastError;
+
+    // 2. List checkpoints (non-blocking)
+    let checkpointsData: any[] = [];
+    try {
+        const cpResult = await fetchCheckpoints();
+        checkpointsData = cpResult.data || [];
+    } catch (cpError) {
+        console.warn(`Warning: Failed to list checkpoints for job ${jobId}:`, cpError);
+    }
+
+    // Sort checkpoints by step_number desc
+    const latestCheckpoint = checkpointsData.length > 0 
+      ? checkpointsData
       .slice()
-      .sort((a, b) => (b.step_number ?? 0) - (a.step_number ?? 0))[0];
+          .sort((a: any, b: any) => (b.step_number ?? 0) - (a.step_number ?? 0))[0]
+      : undefined;
 
+    // Map to expected shape
+    // Ensure we return safe defaults if fields are missing
     return {
-      job,
-      checkpointFiles: checkpoints.data.flatMap(
-        (checkpoint) =>
-          (checkpoint as { result_files?: Array<{ id: string }> }).result_files ?? [],
+      job: {
+        id: job.id,
+        status: job.status,
+        fine_tuned_model: job.fine_tuned_model,
+        trained_tokens: job.trained_tokens,
+        // Pass through other fields as needed
+      },
+      checkpointFiles: checkpointsData.flatMap(
+        (checkpoint: any) =>
+          (checkpoint.result_files ?? []).map((f: any) => ({ id: f.id || f })),
       ),
       latestCheckpoint,
     };
   } catch (error) {
+    console.error(`Error fetching fine-tune status for ${jobId}:`, error);
     throw new PipelineActionError("Failed to retrieve fine-tuning status", error);
   }
 }

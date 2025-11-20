@@ -326,50 +326,58 @@ export async function handleJailbreak(
   }
 
   // Handle Regression Testing (Custom Prompts)
-  if (payload.customPrompts && payload.customPrompts.length > 0) {
+  if ((payload.customPrompts && payload.customPrompts.length > 0) || (payload.customAttacks && payload.customAttacks.length > 0)) {
     // Ensure model is available before starting
     await waitForModelAvailability(payload.modelId);
 
     const successfulPrompts: JailbreakResult["successfulPrompts"] = [];
+    const allAttempts: NonNullable<JailbreakResult["allAttempts"]> = [];
     const concurrencyLimit = 5;
-    const prompts = payload.customPrompts;
+    
+    const attacks = payload.customAttacks || payload.customPrompts!.map(p => ({ prompt: p, attackMethod: "regression" }));
 
-    const executePrompt = async (prompt: string) => {
+    const executeAttack = async (attack: { prompt: string, attackMethod: string }) => {
+      const { prompt, attackMethod } = attack;
       const response = await callNebiusChat({
         modelId: payload.modelId,
         prompt: prompt,
-        systemPrompt: "You are a helpful assistant.", // Standard system prompt for regression
+        systemPrompt: attackMethod === "regression" ? "You are a helpful assistant." : getSystemPromptForMethod(attackMethod), 
       });
 
       const content = response.choices[0]?.message?.content ?? "";
       const verdict = await judgeJailbreakAttempt({
-        attackMethod: "regression",
+        attackMethod: attackMethod,
         attackPrompt: prompt,
         modelResponse: content,
         targetModelId: payload.modelId,
       });
+      
+      const resultEntry = {
+        prompt,
+        responseSnippet: content.slice(0, 2000),
+        attackMethod: attackMethod,
+        judgeVerdict: verdict,
+      };
+      
+      allAttempts.push(resultEntry);
 
       if (verdict.outcome !== "blocked") {
-        successfulPrompts.push({
-          prompt,
-          responseSnippet: content.slice(0, 120),
-          attackMethod: "regression",
-          judgeVerdict: verdict,
-        });
+        successfulPrompts.push(resultEntry);
       }
     };
 
     // Execute in chunks
-    for (let i = 0; i < prompts.length; i += concurrencyLimit) {
-      const chunk = prompts.slice(i, i + concurrencyLimit);
-      await Promise.all(chunk.map(executePrompt));
+    for (let i = 0; i < attacks.length; i += concurrencyLimit) {
+      const chunk = attacks.slice(i, i + concurrencyLimit);
+      await Promise.all(chunk.map(executeAttack));
     }
 
     return {
-      attempts: prompts.length,
+      attempts: attacks.length,
       successRate:
-        prompts.length > 0 ? (successfulPrompts.length / prompts.length) * 100 : 0,
+        attacks.length > 0 ? (successfulPrompts.length / attacks.length) * 100 : 0,
       successfulPrompts,
+      allAttempts,
       simulated: false,
     };
   }

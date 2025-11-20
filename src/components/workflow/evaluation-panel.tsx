@@ -71,9 +71,14 @@ export function EvaluationPanel() {
   );
 
   const baselineJailbreak =
-    rawBaselineJailbreak || adaptArsenalToJailbreak(lastArsenalSummary);
+    lastArsenalSummary
+      ? adaptArsenalToJailbreak(lastArsenalSummary)
+      : rawBaselineJailbreak;
+
   const hardenedJailbreak =
-    rawHardenedJailbreak || adaptArsenalToJailbreak(hardenedArsenalSummary);
+    hardenedArsenalSummary
+      ? adaptArsenalToJailbreak(hardenedArsenalSummary)
+      : rawHardenedJailbreak;
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -89,8 +94,8 @@ export function EvaluationPanel() {
 
   return (
     <StepCard
-      title="🔬 Nebius Workflow"
-      subtitle="Before / after impact"
+      title="Model Hardening Results"
+      subtitle="Verification against known exploits"
       accent="blue"
     >
       {!hasData && (
@@ -105,24 +110,28 @@ export function EvaluationPanel() {
         <div className="space-y-6">
           {/* High-level metrics */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              title="Audit risk score"
-              baseline={baselineAudit?.riskScore}
-              hardened={hardenedAudit?.riskScore}
-              formatter={(value) => value?.toFixed(0) ?? "—"}
-              helper="Lower is better. Derived from TransformerLens probe."
-              lowerIsBetter
-            />
-            <MetricCard
-              title="Refusal rate"
-              baseline={baselineAudit?.refusalRate}
-              hardened={hardenedAudit?.refusalRate}
-              formatter={(value) =>
-                value !== undefined ? formatPercent(value / 100) : "—"
-              }
-              helper="Heuristic share of prompts that the model refused."
-              lowerIsBetter={false}
-            />
+            {(baselineAudit || hardenedAudit) && (
+              <>
+                <MetricCard
+                  title="Audit risk score"
+                  baseline={baselineAudit?.riskScore}
+                  hardened={hardenedAudit?.riskScore}
+                  formatter={(value) => value?.toFixed(0) ?? "—"}
+                  helper="Lower is better. Derived from TransformerLens probe."
+                  lowerIsBetter
+                />
+                <MetricCard
+                  title="Refusal rate"
+                  baseline={baselineAudit?.refusalRate}
+                  hardened={hardenedAudit?.refusalRate}
+                  formatter={(value) =>
+                    value !== undefined ? formatPercent(value / 100) : "—"
+                  }
+                  helper="Heuristic share of prompts that the model refused."
+                  lowerIsBetter={false}
+                />
+              </>
+            )}
             <MetricCard
               title="Jailbreak success rate"
               baseline={baselineJailbreak?.successRate}
@@ -143,7 +152,7 @@ export function EvaluationPanel() {
             />
           </div>
 
-          {/* Detailed audit comparison */}
+          {/* Detailed audit comparison - Only show if audit data exists */}
           {(baselineAudit || hardenedAudit) && (
             <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-5 space-y-4">
               <button
@@ -202,10 +211,7 @@ export function EvaluationPanel() {
           {/* Detailed jailbreak comparison */}
           {(baselineJailbreak || hardenedJailbreak) && (
             <div className="rounded-2xl border border-sky-100 bg-sky-50/30 p-5 space-y-4">
-              <button
-                onClick={() => toggleSection("jailbreak")}
-                className="flex items-center justify-between w-full text-left"
-              >
+              <div className="flex items-center justify-between w-full">
                 <div>
                   <h3 className="text-lg font-semibold text-sky-900">
                     ⚔️ Jailbreak Attack Comparison
@@ -214,261 +220,182 @@ export function EvaluationPanel() {
                     Sample successful attacks before and after hardening
                   </p>
                 </div>
-                <span className="text-sky-600 text-xl">
-                  {expandedSection === "jailbreak" ? "−" : "+"}
-                </span>
-              </button>
+              </div>
 
-              {expandedSection === "jailbreak" && (
-                <div className="space-y-4 pt-2">
-                  {lastJailbreakInput && (
-                    <div className="rounded-xl bg-white/80 p-4 border border-sky-100">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-sky-600 mb-2">
-                        Attack Configuration
-                      </p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-zinc-500">Attack Type:</span>{" "}
-                          <span className="font-medium text-zinc-900">
-                            {lastJailbreakInput.attackType}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-zinc-500">Attempts:</span>{" "}
-                          <span className="font-medium text-zinc-900">
-                            {lastJailbreakInput.attackCount}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Show sample successful attacks - one per unique attack method */}
-                  <div className="space-y-3">
-                    {(() => {
-                      // Group attacks by method and get one representative per method
-                      const attacksByMethod = new Map<string, JailbreakResult['successfulPrompts'][0]>();
-                      
-                      baselineJailbreak?.successfulPrompts.forEach((attack) => {
-                        const method = attack.attackMethod || "unknown";
-                        if (!attacksByMethod.has(method)) {
-                          attacksByMethod.set(method, attack);
-                        }
-                      });
-
-                      // Also include methods that succeeded in hardened but not baseline
-                      hardenedJailbreak?.successfulPrompts.forEach((attack) => {
-                        const method = attack.attackMethod || "unknown";
-                        if (!attacksByMethod.has(method)) {
-                          attacksByMethod.set(method, attack);
-                        }
-                      });
-
-                      const uniqueAttacks = Array.from(attacksByMethod.values()).slice(0, 5);
-                      
-                      if (uniqueAttacks.length === 0) {
-                        return (
-                          <p className="text-xs text-zinc-500 italic text-center py-4">
-                            No successful attacks to display. Both models successfully blocked all attempts! 🎉
-                          </p>
-                        );
+              <div className="space-y-4 pt-2">
+                {/* Show sample successful attacks - one per unique attack method */}
+                <div className="space-y-3">
+                  {(() => {
+                    // Group attacks by method and get one representative per method
+                    const attacksByMethod = new Map<string, JailbreakResult['successfulPrompts'][0]>();
+                    
+                    baselineJailbreak?.successfulPrompts.forEach((attack) => {
+                      const method = attack.attackMethod || "unknown";
+                      if (!attacksByMethod.has(method)) {
+                        attacksByMethod.set(method, attack);
                       }
+                    });
 
-                      return uniqueAttacks.map((attack, idx) => {
-                        // Find matching hardened attack by method
-                        const hardenedEquivalent = hardenedJailbreak?.successfulPrompts.find(
+                    // Also include methods that succeeded in hardened but not baseline
+                    hardenedJailbreak?.successfulPrompts.forEach((attack) => {
+                      const method = attack.attackMethod || "unknown";
+                      if (!attacksByMethod.has(method)) {
+                        attacksByMethod.set(method, attack);
+                      }
+                    });
+
+                    const uniqueAttacks = Array.from(attacksByMethod.values()).slice(0, 5);
+                    
+                    if (uniqueAttacks.length === 0) {
+                      return (
+                        <p className="text-xs text-zinc-500 italic text-center py-4">
+                          No successful attacks to display. Both models successfully blocked all attempts! 🎉
+                        </p>
+                      );
+                    }
+
+                    return uniqueAttacks.map((attack, idx) => {
+                      // Find matching hardened attack by method
+                      // Use allAttempts if available (regression flow), otherwise fallback to successfulPrompts
+                      const allHardened = hardenedJailbreak?.allAttempts || hardenedJailbreak?.successfulPrompts || [];
+                      
+                      // Try to find exact match by prompt text first (most accurate for regression)
+                      let hardenedEquivalent = allHardened.find(
+                        (h) => h.prompt === attack.prompt
+                      );
+                      
+                      // If not found, fallback to method matching (less accurate if multiple per method)
+                      if (!hardenedEquivalent) {
+                        hardenedEquivalent = allHardened.find(
                           (h) => h.attackMethod === attack.attackMethod
                         );
-                        
-                        // If no exact match, try to find any attack of the same method
-                        const hardenedMethodAttack = hardenedEquivalent || 
-                          hardenedJailbreak?.successfulPrompts.find(
-                            (h) => (h.attackMethod || "unknown") === (attack.attackMethod || "unknown")
-                          );
+                      }
+                      
+                      const hardenedMethodAttack = hardenedEquivalent;
 
-                        const methodName = attack.attackMethod || "unknown";
-                        const baselineVerdict = attack.judgeVerdict;
-                        const hardenedVerdict = hardenedMethodAttack?.judgeVerdict;
+                      const methodName = attack.attackMethod || "unknown";
+                      const baselineVerdict = attack.judgeVerdict;
+                      const hardenedVerdict = hardenedMethodAttack?.judgeVerdict;
 
-                        return (
-                          <div
-                            key={`${methodName}-${idx}`}
-                            className="rounded-xl bg-white border border-sky-100 p-4 space-y-3"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold uppercase tracking-wide text-sky-600">
-                                {methodName.replace(/-/g, " ")}
-                              </span>
-                              <div className="flex gap-2">
-                                {baselineVerdict && (
-                                  <span
-                                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                      baselineVerdict.outcome === "leaked"
-                                        ? "bg-rose-100 text-rose-700"
-                                        : baselineVerdict.outcome === "partial"
-                                          ? "bg-amber-100 text-amber-700"
-                                          : "bg-emerald-100 text-emerald-700"
-                                    }`}
-                                  >
-                                    Baseline: {baselineVerdict.outcome}
-                                  </span>
-                                )}
-                                {hardenedVerdict && (
-                                  <span
-                                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                      hardenedVerdict.outcome === "leaked"
-                                        ? "bg-rose-100 text-rose-700"
-                                        : hardenedVerdict.outcome === "partial"
-                                          ? "bg-amber-100 text-amber-700"
-                                          : "bg-emerald-100 text-emerald-700"
-                                    }`}
-                                  >
-                                    Hardened: {hardenedVerdict.outcome}
-                                  </span>
-                                )}
-                                {!hardenedMethodAttack && (
-                                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                                    Blocked
-                                  </span>
-                                )}
-                              </div>
+                      return (
+                        <div
+                          key={`${methodName}-${idx}`}
+                          className="rounded-xl bg-white border border-sky-100 p-4 space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-sky-600">
+                              {methodName.replace(/-/g, " ")}
+                            </span>
+                            <div className="flex gap-2">
+                              {baselineVerdict && (
+                                <span
+                                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                    baselineVerdict.outcome === "leaked"
+                                      ? "bg-rose-100 text-rose-700"
+                                      : baselineVerdict.outcome === "partial"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-emerald-100 text-emerald-700"
+                                  }`}
+                                >
+                                  Baseline: {baselineVerdict.outcome}
+                                </span>
+                              )}
+                              {hardenedVerdict && (
+                                <span
+                                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                    hardenedVerdict.outcome === "leaked"
+                                      ? "bg-rose-100 text-rose-700"
+                                      : hardenedVerdict.outcome === "partial"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-emerald-100 text-emerald-700"
+                                  }`}
+                                >
+                                  Hardened: {hardenedVerdict.outcome}
+                                </span>
+                              )}
+                              {!hardenedMethodAttack && (
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                                  Blocked
+                                </span>
+                              )}
                             </div>
+                          </div>
 
-                            <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 max-h-24 overflow-y-auto">
-                              <p className="font-semibold text-zinc-700 mb-1">Attack Prompt:</p>
-                              {(attack.prompt || "").slice(0, 300)}
-                              {(attack.prompt || "").length > 300 ? "..." : ""}
-                            </div>
+                          <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600 max-h-24 overflow-y-auto">
+                            <p className="font-semibold text-zinc-700 mb-1">Attack Prompt:</p>
+                            {(attack.prompt || "").slice(0, 300)}
+                            {(attack.prompt || "").length > 300 ? "..." : ""}
+                          </div>
 
-                            <div className="grid gap-3 md:grid-cols-2">
-                              <div className="rounded-lg bg-rose-50/50 border border-rose-100 p-3">
-                                <p className="text-xs font-semibold text-rose-700 mb-2">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-lg bg-rose-50/50 border border-rose-100 p-3 flex flex-col h-full">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-rose-700">
                                   Baseline Response
                                 </p>
-                                <p className="text-xs text-zinc-700 max-h-32 overflow-y-auto">
-                                  {attack.responseSnippet || "No response"}
-                                </p>
-                                {baselineVerdict && (
-                                  <p className="text-xs text-rose-600 mt-2 italic">
+                                {baselineVerdict?.outcome === "leaked" && (
+                                  <span className="text-[10px] font-bold bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full">
+                                    LEAKED
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 text-xs text-zinc-700 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed bg-white/50 p-2 rounded border border-rose-100/50">
+                                {attack.responseSnippet || "No response"}
+                              </div>
+                              {baselineVerdict && (
+                                <div className="mt-2">
+                                  <p className="text-xs text-rose-600 italic">
                                     Risk: {baselineVerdict.riskScore}/100
                                   </p>
-                                )}
-                              </div>
-
-                              <div className="rounded-lg bg-emerald-50/50 border border-emerald-100 p-3">
-                                <p className="text-xs font-semibold text-emerald-700 mb-2">
-                                  Hardened Response
-                                </p>
-                                {hardenedMethodAttack ? (
-                                  <>
-                                    <p className="text-xs text-zinc-700 max-h-32 overflow-y-auto">
-                                      {hardenedMethodAttack.responseSnippet || "No response"}
-                                    </p>
-                                    {hardenedVerdict && (
-                                      <p className="text-xs text-emerald-600 mt-2 italic">
-                                        Risk: {hardenedVerdict.riskScore}/100
-                                      </p>
-                                    )}
-                                  </>
-                                ) : (
-                                  <p className="text-xs text-emerald-600 italic font-semibold">
-                                    ✓ Attack successfully blocked
-                                  </p>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
 
-                            {(baselineVerdict?.reasoning || hardenedVerdict?.reasoning) && (
-                              <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600">
-                                <p className="font-semibold text-zinc-700 mb-1">Judge Reasoning:</p>
-                                {hardenedVerdict?.reasoning || baselineVerdict?.reasoning}
+                            <div className="rounded-lg bg-emerald-50/50 border border-emerald-100 p-3 flex flex-col h-full">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-semibold text-emerald-700">
+                                  Hardened Response
+                                </p>
+                                {hardenedVerdict?.outcome === "blocked" && (
+                                  <span className="text-[10px] font-bold bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full">
+                                    BLOCKED
+                                  </span>
+                                )}
                               </div>
-                            )}
+                              {hardenedMethodAttack ? (
+                                <>
+                                  <div className="flex-1 text-xs text-zinc-700 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed bg-white/50 p-2 rounded border border-emerald-100/50">
+                                    {hardenedMethodAttack.responseSnippet || "No response content returned."}
+                                  </div>
+                                  {hardenedVerdict && (
+                                    <div className="mt-2 flex items-center justify-between">
+                                      <p className="text-xs text-emerald-600 italic">
+                                        Risk: {hardenedVerdict.riskScore}/100
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="flex-1 flex items-center justify-center text-center p-4">
+                                  <p className="text-xs text-emerald-600 italic font-semibold">
+                                    ✓ Attack successfully blocked (No response recorded)
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Attack method breakdown */}
-          {baselineJailbreak?.attackMethodBreakdown && (
-            <div className="rounded-2xl border border-sky-100 bg-white p-5 space-y-4">
-              <h3 className="text-lg font-semibold text-sky-900">
-                📈 Attack Method Effectiveness
-              </h3>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(baselineJailbreak.attackMethodBreakdown).map(
-                  ([method, stats]) => {
-                    const hardenedStats =
-                      hardenedJailbreak?.attackMethodBreakdown?.[method];
-                    // Calculate rates as decimals (0.0 - 1.0)
-                    const baselineRateDecimal = stats.total > 0 ? stats.successful / stats.total : 0;
-                    const hardenedRateDecimal = hardenedStats && hardenedStats.total > 0
-                      ? hardenedStats.successful / hardenedStats.total
-                      : undefined;
-
-                    // Convert to percentages for display (0.0 - 100.0)
-                    const baselineRatePercent = baselineRateDecimal * 100;
-                    const hardenedRatePercent = hardenedRateDecimal !== undefined ? hardenedRateDecimal * 100 : undefined;
-
-                    const improvement = hardenedRateDecimal !== undefined
-                      ? ((baselineRateDecimal - hardenedRateDecimal) / Math.max(baselineRateDecimal, 0.01)) * 100
-                      : undefined;
-
-                    return (
-                      <div
-                        key={method}
-                        className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 space-y-2"
-                      >
-                        <p className="text-sm font-semibold text-zinc-900 capitalize">
-                          {method.replace(/-/g, " ")}
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <p className="text-zinc-500">Baseline</p>
-                            <p className="text-lg font-semibold text-rose-600">
-                              {formatPercent(baselineRatePercent)}
-                            </p>
-                            <p className="text-zinc-500">
-                              {stats.successful}/{stats.total}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-zinc-500">Hardened</p>
-                            {hardenedStats ? (
-                              <>
-                                <p className="text-lg font-semibold text-emerald-600">
-                                  {formatPercent(hardenedRatePercent!)}
-                                </p>
-                                <p className="text-zinc-500">
-                                  {hardenedStats.successful}/{hardenedStats.total}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-sm text-zinc-400">—</p>
-                            )}
-                          </div>
+                          {(baselineVerdict?.reasoning || hardenedVerdict?.reasoning) && (
+                            <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-600">
+                              <p className="font-semibold text-zinc-700 mb-1">Judge Reasoning:</p>
+                              {hardenedVerdict?.reasoning || baselineVerdict?.reasoning}
+                            </div>
+                          )}
                         </div>
-                        {improvement !== undefined && (
-                          <p
-                            className={`text-xs font-semibold ${
-                              improvement >= 0
-                                ? "text-emerald-600"
-                                : "text-rose-600"
-                            }`}
-                          >
-                            {improvement >= 0 ? "↓" : "↑"}{" "}
-                            {Math.abs(improvement).toFixed(1)}% vs baseline
-                          </p>
-                        )}
-                      </div>
-                    );
-                  }
-                )}
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             </div>
           )}

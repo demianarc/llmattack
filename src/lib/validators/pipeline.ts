@@ -31,6 +31,10 @@ export const jailbreakSchema = z.object({
   attackCount: z.number().min(1).max(50).default(15),
   attackType: z.enum(["gcg", "multi-turn", "fuzzing", "token-manip", "anthropic-style", "comprehensive"]).optional().default("comprehensive"),
   customPrompts: z.array(z.string()).optional(),
+  customAttacks: z.array(z.object({
+    prompt: z.string(),
+    attackMethod: z.string()
+  })).optional(),
 });
 
 export const fineTuneSchema = z.object({

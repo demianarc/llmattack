@@ -34,6 +34,12 @@ export type JailbreakResult = {
     attackMethod?: string;
     judgeVerdict?: JailbreakJudgeVerdict;
   }>;
+  allAttempts?: Array<{
+    prompt: string;
+    responseSnippet: string;
+    attackMethod?: string;
+    judgeVerdict?: JailbreakJudgeVerdict;
+  }>;
   attackMethodBreakdown?: Record<string, { successful: number; total: number }>;
   simulated: boolean;
 };

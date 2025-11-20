@@ -332,11 +332,14 @@ export function AutomationPanel() {
       
       // Get the successful prompts from Red Team Arsenal results
       const { lastArsenalSummary } = useWorkflowStore.getState();
-      const baselinePrompts = lastArsenalSummary?.results
+      const baselineAttacks = lastArsenalSummary?.results
         .filter(r => r.modelId === modelId && r.successfulAttempts > 0)
-        .map(r => r.sampleSuccessfulPrompt) || [];
+        .map(r => ({
+          prompt: r.sampleSuccessfulPrompt,
+          attackMethod: r.attackVector,
+        })) || [];
       
-      if (baselinePrompts.length === 0) {
+      if (baselineAttacks.length === 0) {
         throw new Error("No baseline jailbreak prompts found. Run Red Team Arsenal first.");
       }
 
@@ -347,8 +350,8 @@ export function AutomationPanel() {
         body: {
           modelId: deployedModelName,
           attackType: "comprehensive",
-          customPrompts: baselinePrompts,
-          attackCount: baselinePrompts.length,
+          customAttacks: baselineAttacks,
+          attackCount: baselineAttacks.length,
         },
       });
       
