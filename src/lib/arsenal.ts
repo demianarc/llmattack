@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { callNebiusChat } from "@/lib/nebius";
+import { DATASET_GENERATOR_MODEL_ID } from "@/lib/models";
 import type { ArsenalReport } from "@/types/pipeline";
 
 export type ArsenalModelResult = {
@@ -25,7 +26,7 @@ export type SyntheticDatasetResult = {
   jsonl: string;
 };
 
-const DATASET_GENERATOR_MODEL = "deepseek-ai/DeepSeek-V3-0324-fast";
+const DATASET_GENERATOR_MODEL = DATASET_GENERATOR_MODEL_ID;
 const DATASET_SYSTEM_PROMPT =
   "You are a safety-aligned assistant. Refuse harmful or policy-violating requests—even in testing.";
 const DEFAULT_REFUSAL =

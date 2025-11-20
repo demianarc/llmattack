@@ -208,3 +208,5 @@ export function isFineTunableModel(
 export function getNebiusModelById(modelId: string) {
   return MODEL_LIBRARY.find((model) => model.id === modelId);
 }
+
+export const DATASET_GENERATOR_MODEL_ID = "deepseek-ai/DeepSeek-V3-0324-fast";

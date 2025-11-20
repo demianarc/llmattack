@@ -4,9 +4,18 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 
 > ⚠️ **Disclaimer:** This tool is for **authorized security testing and educational purposes only**. The authors are not responsible for misuse.
+
+---
+
+## 🛡️ Security Warning
+**DO NOT DEPLOY THIS APPLICATION TO A PUBLIC URL.**
+This application exposes powerful LLM capabilities and API endpoints that can be used to generate harmful content or incur significant costs. It is intended for **local use only** or deployment within a strictly controlled, authenticated private network.
+- **No built-in authentication:** The API routes are unprotected by default.
+- **Cost risk:** Malicious actors could trigger expensive fine-tuning or batch inference jobs.
+- **Safety risk:** The tool is designed to bypass safety filters; public exposure allows anyone to generate harmful content.
 
 ---
 
@@ -58,11 +67,13 @@ npm install
 ### 2. Configure Environment
 Create a `.env.local` file:
 ```bash
-# Required for inference & fine-tuning
+# Required for inference, fine-tuning, and judging
 NEBIUS_API_KEY=your_key_here
+NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1/
 
-# Optional: For judge comparison or specific models
-OPENAI_API_KEY=your_key_here 
+# Optional: Basic Auth for public deployment (Recommended)
+BASIC_AUTH_USER=admin
+BASIC_AUTH_PASSWORD=your_secure_password
 ```
 
 ### 3. Run the Platform
