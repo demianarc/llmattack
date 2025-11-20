@@ -30,27 +30,27 @@ Most red-teaming tools use toy prompts ("DAN mode") that are easily patched. **J
 
 ### 🔴 **39 Research-Backed Attack Vectors**
 We implement the most effective attacks from recent literature:
-- **[Knowledge Decomposition (KDA)](docs/ATTACK_VECTORS.md#legendary-tier-auto-retry-10x):** Breaks harmful tasks into benign sub-steps (96% Success).
-- **[Dual Intention Escape](docs/ATTACK_VECTORS.md#legendary-tier-auto-retry-10x):** Hides harm in benign "engineering briefs."
-- **[Chaos Chain](docs/ATTACK_VECTORS.md#legendary-tier-auto-retry-10x):** Iterative de-obfuscation that breaks reasoning models.
+- **[Knowledge Decomposition (KDA)](docs/ATTACK_VECTORS.md#legendary-tier):** Breaks harmful tasks into benign sub-steps (96% Success).
+- **[Dual Intention Escape](docs/ATTACK_VECTORS.md#legendary-tier):** Hides harm in benign "engineering briefs."
+- **[Chaos Chain](docs/ATTACK_VECTORS.md#legendary-tier):** Iterative de-obfuscation that breaks reasoning models.
 - **System Policy Override:** Fakes "admin mode" privileges.
 
 👉 **[View Full Attack Arsenal](docs/ATTACK_VECTORS.md)**
 
 ### 🔬 **Advanced Model-Based Scoring**
-We use a **multi-tier evaluation system** combining regex-based heuristic checks with a dedicated LLM judge. This hybrid approach detects **partial leaks** and assigns risk scores (0-100), ensuring that "successful" jailbreaks actually contain harmful information, not just refusals or incoherent text.
+We use a **StrongREJECT-aligned evaluation system**. Our dedicated LLM judge detects **partial leaks** and assigns granular risk scores (0-100) based on research benchmarks, ensuring that "successful" jailbreaks actually contain harmful information, not just refusals or incoherent text.
 
 👉 **[Read the Research Basis](docs/RESEARCH.md)**
 
 ### 🔄 **Configurable Resampling Strategy**
-Single-shot testing misses 40% of vulnerabilities. We allow **customizable attack volume** (default 15, up to 50 attempts) with research-optimized parameters (`temp=0.2`, `top_p=0.95`) to catch stochastic failures while managing API costs.
+Single-shot testing misses 40% of vulnerabilities. We allow **customizable attack volume** (default 10, up to 50 attempts) with research-optimized parameters (`temp=0.2`, `top_p=0.95`) to catch stochastic failures while managing API costs.
 
 👉 **[See Parameter Optimization Guide](docs/PARAMETER_OPTIMIZATION.md)**
 
 ### 🛡️ **Auto-Hardening Pipeline**
 Don't just break it. Fix it.
 1. **Generate Dataset:** Converts successful jailbreaks into synthetic refusal samples.
-2. **Fine-Tune:** One-click export to LoRA/SFT pipelines (via Nebius AI Studio).
+2. **Fine-Tune:** One-click export to LoRA/SFT pipelines (via Nebius Token Factory).
 3. **Verify:** Re-test the hardened model to ensure the vulnerability is closed.
 
 ---

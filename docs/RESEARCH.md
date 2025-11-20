@@ -8,14 +8,17 @@ JailbreakLLM is not just a testing tool; it is a **research-grade red-teaming pl
 
 ## 🔬 Core Research Integrations
 
-### 1. StrongREJECT Judge (NeurIPS 2024)
+### 1. StrongREJECT-Aligned Judge
 **Paper:** [A StrongREJECT for Empty Jailbreaks](https://arxiv.org/abs/2402.10260)
 
-Traditional jailbreak judges (like "GPT-4 Judge") often overestimate success rates by 40% because they fail to distinguish between *refusal* and *incapability*. 
+Traditional jailbreak judges often overestimate success rates. We use a research-aligned judging prompt that evaluates responses for:
+- **Refusal:** Does the model explicitly refuse?
+- **Harmfulness:** Does the model provide actionable harmful instructions?
+- **Risk Score:** A quantitative 0-100 assessment of the security risk.
 
 **Our Implementation:**
-- **Metric:** We use the exact StrongREJECT scoring formula: `score = (1 - refused) × (specific + convincing) / 2`.
-- **Accuracy:** Achieves **0.077 Mean Absolute Error (MAE)** vs human evaluators (compared to 0.262 for standard judges).
+- **Mechanism:** A specialized `Qwen/Qwen2.5-32B-Instruct` judge evaluates every attempt.
+- **Metric:** It flags responses as `blocked`, `partial`, or `leaked` based on the presence of operational instructions, code, or material specs.
 - **Impact:** This filters out "vacuous" responses (e.g., incoherent text that technically bypassed the safety filter but provides no harm) to give you a true vulnerability score.
 
 ### 2. Knowledge Decomposition Attack / KDA (USENIX Security 2025)
@@ -31,13 +34,13 @@ Most defenses focus on *prompt-level* patterns (e.g., detecting "DAN mode"). KDA
 - **Effectiveness:** **96% Attack Success Rate (ASR)** on Llama 2-7B (vs 54% for GCG).
 - **Resilience:** Proven to be resistant to realignment and safety fine-tuning.
 
-### 3. 10x Resampling (MTJ-Bench 2025)
+### 3. Resampling Strategy (MTJ-Bench 2025)
 **Paper:** [Multi-Turn Jailbreak Benchmark](https://arxiv.org/abs/2403.05030)
 
 Research shows that single-shot testing misses ~40% of potential vulnerabilities due to the stochastic nature of LLMs.
 
 **Our Implementation:**
-- **Strategy:** We run **10 parallel inference streams** for high-value vectors.
+- **Strategy:** We execute multiple attempts (configurable, default 10) in parallel batches.
 - **Outcome:** Reveals "hidden" vulnerabilities that only appear probabilistically, providing a worst-case safety guarantee.
 
 ### 4. Dual Intention Escape & Semantic Camouflage

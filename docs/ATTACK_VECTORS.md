@@ -2,9 +2,9 @@
 
 JailbreakLLM includes **39 advanced attack vectors** designed to test the robustness of LLM safety alignment. These range from classic techniques to cutting-edge research methodologies.
 
-## 🔴 Legendary Tier (Auto-Retry: 10x)
+## 🔴 Legendary Tier
 
-These are the most effective attacks, featuring sophisticated strategies and automated retry logic to maximize success.
+These are the most effective attacks, featuring sophisticated strategies. We recommend running these with at least **10 attempts** (configurable in the UI) to maximize success rates due to the stochastic nature of safety filters.
 
 | Attack Vector | Description | Key Technique |
 |---------------|-------------|---------------|
@@ -17,9 +17,9 @@ These are the most effective attacks, featuring sophisticated strategies and aut
 | **Raw Override Mode** | Claims to disable "chat mode" and "safety layers," forcing the model to generate as a base completion engine. | Mode switching simulation |
 | **Shadow Core / DarkForge** | Persona-based overrides that demand "unfiltered" or "godmode" outputs. | Extreme roleplay |
 
-## 🟠 Advanced Tier (Auto-Retry: 10x)
+## 🟠 Advanced Tier
 
-Highly effective vectors that use social engineering and professional framing.
+Highly effective vectors that use social engineering and professional framing. Recommended retry count: **10x**.
 
 | Attack Vector | Description |
 |---------------|-------------|
@@ -28,9 +28,9 @@ Highly effective vectors that use social engineering and professional framing.
 | **Crescendo** | Rapid multi-turn escalation (Benign → Technical → Harmful) in <5 turns. |
 | **TombRaider Archive** | Frames the request as "preserving forbidden knowledge" for a historical archive. |
 
-## 🔵 Expert Tier (Auto-Retry: 3x)
+## 🔵 Expert Tier
 
-Standard red-teaming vectors useful for broad coverage.
+Standard red-teaming vectors useful for broad coverage. Recommended retry count: **3-5x**.
 
 - **GCG Override:** Gradient-based adversarial suffixes.
 - **Multi-turn Escalation:** Gradual conversation drift.
@@ -42,11 +42,11 @@ Standard red-teaming vectors useful for broad coverage.
 
 ---
 
-## 🔄 The 10x Resampling Strategy
+## 🔄 The Resampling Strategy
 
-Why do we retry "Legendary" attacks 10 times?
+Why do we recommend retrying "Legendary" attacks 10 times?
 
 Research from **MTJ-Bench (2025)** shows that single-shot testing misses **40% of vulnerabilities**. LLM safety filters are stochastic; a model might refuse a prompt 9 times but comply on the 10th. 
 
-By running 10 parallel streams with `temperature=0.2`, we ensure that if a vulnerability *can* be triggered, it *will* be triggered.
+By default, the platform runs **10 parallel attempts** (configurable) with `temperature=0.2`, ensuring that if a vulnerability *can* be triggered, it *will* be triggered.
 
