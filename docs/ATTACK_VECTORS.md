@@ -1,6 +1,6 @@
 # ⚔️ Red Team Arsenal: Attack Vectors
 
-LLM Attack includes **39 advanced attack vectors** designed to test the robustness of LLM safety alignment. These range from classic techniques to cutting-edge research methodologies.
+JailbreakLLM includes **39 advanced attack vectors** designed to test the robustness of LLM safety alignment. These range from classic techniques to cutting-edge research methodologies.
 
 ## 🔴 Legendary Tier (Auto-Retry: 10x)
 

@@ -1,4 +1,4 @@
-# Contributing to LLM Attack
+# Contributing to JailbreakLLM
 
 We welcome contributions from the security research community!
 

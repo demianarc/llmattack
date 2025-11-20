@@ -2,7 +2,7 @@
 
 ## Overview
 
-LLM Attack is not just a testing tool; it is a **research-grade red-teaming platform** grounded in state-of-the-art academic findings. It implements methodologies from 8 major papers (including NeurIPS 2024 and USENIX Security 2025) to provide accurate, rigorous security assessments of Large Language Models.
+JailbreakLLM is not just a testing tool; it is a **research-grade red-teaming platform** grounded in state-of-the-art academic findings. It implements methodologies from 8 major papers (including NeurIPS 2024 and USENIX Security 2025) to provide accurate, rigorous security assessments of Large Language Models.
 
 ---
 

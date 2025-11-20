@@ -139,7 +139,7 @@ export function EvaluationPanel() {
               formatter={(value) =>
                 value !== undefined ? formatPercent(value / 100) : "—"
               }
-              helper="Measured via llm-attacks (lower is better)."
+              helper="Measured via JailbreakLLM (lower is better)."
               lowerIsBetter
             />
             <MetricCard

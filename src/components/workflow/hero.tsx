@@ -59,7 +59,7 @@ export function WorkflowHero() {
           </span>
           <div className="flex flex-wrap gap-3">
             <SocialLink href="https://x.com/demian_ai" icon={Twitter} label="@demian_ai" />
-            <SocialLink href="https://github.com/demianarc" icon={Github} label="GitHub" />
+            <SocialLink href="https://github.com/demianarc/jailbreakllm" icon={Github} label="GitHub" />
             <SocialLink href="https://www.linkedin.com/in/dylanbristot/" icon={Linkedin} label="LinkedIn" />
           </div>
         </div>

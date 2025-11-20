@@ -1,4 +1,4 @@
-# 💀 LLM Attack: Automated Red Team Arsenal
+# 💀 JailbreakLLM: Automated Red Team Arsenal
 
 **Research-grade jailbreaking & hardening platform for Frontier LLMs.**
 
@@ -22,7 +22,7 @@ This application exposes powerful LLM capabilities and API endpoints that can be
 ## 🚨 The Problem
 Frontier models (DeepSeek, Llama 3, GPT-4) claim to be "aligned." **They aren't.**
 
-Most red-teaming tools use toy prompts ("DAN mode") that are easily patched. **LLM Attack** implements **39 advanced attack vectors** from top academic papers (USENIX '25, NeurIPS '24) to expose the real cracks in your model's safety.
+Most red-teaming tools use toy prompts ("DAN mode") that are easily patched. **JailbreakLLM** implements **39 advanced attack vectors** from top academic papers (USENIX '25, NeurIPS '24) to expose the real cracks in your model's safety.
 
 ---
 
@@ -37,13 +37,13 @@ We implement the most effective attacks from recent literature:
 
 👉 **[View Full Attack Arsenal](docs/ATTACK_VECTORS.md)**
 
-### 🔬 **StrongREJECT Scoring**
-We use the **StrongREJECT** judge methodology (0.077 MAE vs humans) instead of basic "refusal checks." This measures **capabilities**, ensuring that a "successful" jailbreak actually contains harmful information, not just incoherent text.
+### 🔬 **Advanced Model-Based Scoring**
+We use a **multi-tier evaluation system** combining regex-based heuristic checks with a dedicated LLM judge. This hybrid approach detects **partial leaks** and assigns risk scores (0-100), ensuring that "successful" jailbreaks actually contain harmful information, not just refusals or incoherent text.
 
 👉 **[Read the Research Basis](docs/RESEARCH.md)**
 
-### 🔄 **10x Resampling Strategy**
-Single-shot testing misses 40% of vulnerabilities. We run **10 parallel inference streams** with research-optimized parameters (`temp=0.2`, `top_p=0.95`) to catch stochastic failures.
+### 🔄 **Configurable Resampling Strategy**
+Single-shot testing misses 40% of vulnerabilities. We allow **customizable attack volume** (default 15, up to 50 attempts) with research-optimized parameters (`temp=0.2`, `top_p=0.95`) to catch stochastic failures while managing API costs.
 
 👉 **[See Parameter Optimization Guide](docs/PARAMETER_OPTIMIZATION.md)**
 
@@ -59,8 +59,8 @@ Don't just break it. Fix it.
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/demianarc/llmattack.git
-cd llmattack
+git clone https://github.com/demianarc/jailbreakllm.git
+cd jailbreakllm
 npm install
 ```
 
